@@ -26,6 +26,21 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 
 Sin esas variables, la app arranca en **modo local**.
 
+## Producción (web)
+
+La web se publica en GitHub Pages:
+
+**https://brunosugga.github.io/app-calendario/**
+
+Cada push a `main` dispara el deploy (workflow `Deploy GitHub Pages`).
+
+En Supabase → **Authentication → URL Configuration**:
+
+1. **Site URL:** `https://brunosugga.github.io/app-calendario/`
+2. **Redirect URLs:** agregá `https://brunosugga.github.io/app-calendario/**`
+
+Los secrets `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` viven en GitHub → Settings → Secrets.
+
 ## Desarrollo
 
 ```bash

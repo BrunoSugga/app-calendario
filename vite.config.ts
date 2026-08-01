@@ -6,6 +6,8 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  // En GitHub Pages usamos VITE_BASE=/app-calendario/; Tauri y Vercel quedan en '/'
+  base: process.env.VITE_BASE || '/',
   server: {
     port: 5173,
     strictPort: true,
