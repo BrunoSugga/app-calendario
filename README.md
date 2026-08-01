@@ -49,6 +49,8 @@ npm run build
 npm run tauri:build
 ```
 
+El build de escritorio genera instaladores Windows (NSIS `.exe` y MSI) en `src-tauri/target/release/bundle/`.
+
 ## Uso rápido
 
 1. Entrar con correo (y contraseña si hay Supabase).
