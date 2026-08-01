@@ -1,4 +1,4 @@
-# Calendario
+# BMatrix Calendario
 
 Aplicación de calendario estilo Outlook con:
 

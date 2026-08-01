@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Calendario",
+  "productName": "BMatrix Calendario",
   "version": "1.0.0",
   "identifier": "com.bruno.calendario",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Calendario",
+        "title": "BMatrix Calendario",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

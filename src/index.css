@@ -123,13 +123,40 @@ button {
   padding: 1.5rem;
   display: grid;
   gap: 0.75rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.login-logo {
+  width: min(180px, 55%);
+  height: auto;
+  display: block;
+  margin-bottom: 0.25rem;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
 }
 
 .login-card h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.55rem;
   letter-spacing: 0.02em;
   color: var(--celeste-soft);
+}
+
+.login-card label {
+  width: 100%;
+  text-align: left;
+}
+
+.login-card .btn {
+  width: 100%;
+}
+
+.login-card .btn.link {
+  text-align: center;
+}
+
+.login-sub {
+  text-align: center;
 }
 
 .login-sub {
@@ -193,6 +220,26 @@ textarea:focus {
   flex-direction: column;
   min-height: 0;
   overflow: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.75rem 0.45rem;
+}
+
+.sidebar-brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.sidebar-brand strong {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: var(--celeste-soft);
 }
 
 .sidebar-user {

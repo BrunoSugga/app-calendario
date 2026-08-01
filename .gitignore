@@ -32,6 +32,3 @@ src-tauri/gen
 
 # Installers locales (no subir binarios)
 instaladores/
-
-# Assets locales no usados en build
-logocalendario.png

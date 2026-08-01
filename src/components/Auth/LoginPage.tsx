@@ -30,7 +30,12 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={onSubmit}>
-        <h1>Calendario</h1>
+        <img
+          className="login-logo"
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt="BMatrix Calendario"
+        />
+        <h1>BMatrix Calendario</h1>
         <p className="login-sub">
           {isCloud
             ? 'Iniciá sesión para sincronizar entre dispositivos'

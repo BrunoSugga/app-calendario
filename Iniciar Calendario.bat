@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
-title App Calendario
-echo Iniciando App Calendario...
+title BMatrix Calendario
+echo Iniciando BMatrix Calendario...
 echo.
 call npm run tauri:dev
 if errorlevel 1 (

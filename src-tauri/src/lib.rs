@@ -16,14 +16,14 @@ pub fn run() {
         )?;
       }
 
-      let show_i = MenuItem::with_id(app, "show", "Mostrar Calendario", true, None::<&str>)?;
+      let show_i = MenuItem::with_id(app, "show", "Mostrar BMatrix Calendario", true, None::<&str>)?;
       let quit_i = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
       let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
       let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .tooltip("Calendario")
+        .tooltip("BMatrix Calendario")
         .on_menu_event(|app, event| match event.id.as_ref() {
           "show" => {
             if let Some(window) = app.get_webview_window("main") {

@@ -40,6 +40,10 @@ export function Sidebar({ selectedDate, onSelectDate, onOpenOccurrence }: Props)
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-brand">
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+        <strong>BMatrix Calendario</strong>
+      </div>
       <div className="sidebar-user">
         <strong>{user?.displayName}</strong>
         <span>{isCloud ? 'Sync nube' : 'Modo local'}</span>

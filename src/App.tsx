@@ -16,7 +16,7 @@ function AppBody() {
   }
 
   if (loading) {
-    return <div className="login-page">Cargando…</div>
+    return <div className="login-page">Cargando BMatrix Calendario…</div>
   }
 
   if (!user) {

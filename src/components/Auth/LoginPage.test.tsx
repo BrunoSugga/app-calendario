@@ -28,6 +28,8 @@ describe('LoginPage', () => {
     authMock.signIn.mockResolvedValue(undefined)
     render(<LoginPage />)
 
+    expect(screen.getByRole('heading', { name: 'BMatrix Calendario' })).toBeInTheDocument()
+    expect(screen.getByAltText('BMatrix Calendario')).toBeInTheDocument()
     expect(screen.getByText(/Modo local/i)).toBeInTheDocument()
     await user.type(screen.getByLabelText(/Correo/i), 'bruno@example.com')
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
