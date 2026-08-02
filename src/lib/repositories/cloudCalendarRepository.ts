@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Calendar, CalendarEvent, EventDraft, EventException } from '../../types'
+import { sanitizeCalendarName, sanitizeColor, sanitizeEventDraft } from '../security'
 import type { CalendarRepository, CalendarSnapshot } from './types'
 
 export function createCloudCalendarRepository(client: SupabaseClient): CalendarRepository {
@@ -43,8 +44,8 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
     async createCalendar(_state, userId, name, color) {
       const { error } = await client.from('calendars').insert({
         user_id: userId,
-        name,
-        color,
+        name: sanitizeCalendarName(name),
+        color: sanitizeColor(color),
         is_default: false,
         visible: true,
       })
@@ -53,6 +54,7 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
     },
 
     async saveEvent(_state, userId, draft: EventDraft) {
+      draft = sanitizeEventDraft(draft)
       if (draft.id && draft.editScope === 'single' && draft.occurrenceOriginalStartsAt) {
         const row = {
           event_id: draft.id,

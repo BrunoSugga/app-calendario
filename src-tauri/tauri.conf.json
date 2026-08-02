@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "BMatrix Calendario",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "identifier": "com.bruno.calendario",
   "build": {
     "frontendDist": "../dist",
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com ipc: http://ipc.localhost"
     }
   },
   "bundle": {

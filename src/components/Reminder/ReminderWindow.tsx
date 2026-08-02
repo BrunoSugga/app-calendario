@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
-import { isTauri } from '../../lib/tauri'
+import { consumeReminderPayload, isTauri, type ReminderPayload } from '../../lib/tauri'
+import { isSafeReminderToken } from '../../lib/security'
 
-function paramsFromUrl(): Record<string, string> {
-  const params = new URLSearchParams(window.location.search)
-  const result: Record<string, string> = {}
-  params.forEach((value, key) => {
-    result[key] = value
-  })
-  return result
+function loadReminder(): ReminderPayload | null {
+  const token = new URLSearchParams(window.location.search).get('t') ?? ''
+  if (!isSafeReminderToken(token)) return null
+  return consumeReminderPayload(token)
 }
 
 function clearFiredForEvent(eventId: string): void {
@@ -22,7 +20,7 @@ function clearFiredForEvent(eventId: string): void {
 }
 
 export function ReminderWindow() {
-  const data = useMemo(() => paramsFromUrl(), [])
+  const data = useMemo(() => loadReminder(), [])
   const [message, setMessage] = useState<string | null>(null)
 
   async function closeWindow() {
@@ -35,14 +33,32 @@ export function ReminderWindow() {
   }
 
   async function snooze(minutes: number) {
-    const eventId = data.eventId ?? 'x'
+    if (!data?.eventId) return
     const until = Date.now() + minutes * 60 * 1000
-    localStorage.setItem(`calendario.snooze.${eventId}`, String(until))
-    clearFiredForEvent(eventId)
+    localStorage.setItem(`calendario.snooze.${data.eventId}`, String(until))
+    clearFiredForEvent(data.eventId)
     setMessage(`Pospuesto ${minutes} min`)
     window.setTimeout(() => {
       void closeWindow()
     }, 600)
+  }
+
+  if (!data) {
+    return (
+      <div className="reminder-window">
+        <header>
+          <h1>Recordatorio</h1>
+        </header>
+        <div className="reminder-body">
+          <p className="form-error">Recordatorio inválido o expirado.</p>
+        </div>
+        <footer className="reminder-actions">
+          <button type="button" className="btn primary" onClick={() => void closeWindow()}>
+            Cerrar
+          </button>
+        </footer>
+      </div>
+    )
   }
 
   return (
@@ -52,8 +68,8 @@ export function ReminderWindow() {
       </header>
       <div className="reminder-body">
         <h2>{data.title || 'Evento'}</h2>
-        <p className="reminder-time">{data.time}</p>
-        <p className="reminder-cal">{data.calendar}</p>
+        <p className="reminder-time">{data.timeLabel}</p>
+        <p className="reminder-cal">{data.calendarName}</p>
         {data.description && <p className="reminder-desc">{data.description}</p>}
         {message && <p className="muted">{message}</p>}
       </div>

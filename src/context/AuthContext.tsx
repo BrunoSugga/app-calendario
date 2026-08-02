@@ -16,6 +16,7 @@ import {
   localSignOut,
   setLocalSession,
 } from '../lib/localStore'
+import { assertCloudPassword, clampText, isValidEmail } from '../lib/security'
 
 type AuthUser = {
   id: string
@@ -43,6 +44,12 @@ function mapCloudUser(user: User): AuthUser {
       user.email?.split('@')[0] ||
       'Usuario',
   }
+}
+
+function normalizeEmail(email: string): string {
+  const next = email.trim().toLowerCase()
+  if (!isValidEmail(next)) throw new Error('Correo inválido')
+  return next
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -82,28 +89,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
+    const normalized = normalizeEmail(email)
     if (isCloudMode && supabase) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      return
-    }
-    const db = localSignIn(email)
-    setLocalSession(email)
-    setUser({ id: db.userId, email: db.email, displayName: db.displayName })
-  }, [])
-
-  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    if (isCloudMode && supabase) {
-      const { error } = await supabase.auth.signUp({
-        email,
+      assertCloudPassword(password)
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalized,
         password,
-        options: { data: { display_name: displayName } },
       })
       if (error) throw error
       return
     }
-    const db = localSignIn(email, displayName)
-    setLocalSession(email)
+    const db = localSignIn(normalized)
+    setLocalSession(normalized)
+    setUser({ id: db.userId, email: db.email, displayName: db.displayName })
+  }, [])
+
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    const normalized = normalizeEmail(email)
+    const name = clampText(displayName || normalized.split('@')[0] || 'Usuario', 120)
+    if (isCloudMode && supabase) {
+      assertCloudPassword(password)
+      const { error } = await supabase.auth.signUp({
+        email: normalized,
+        password,
+        options: { data: { display_name: name } },
+      })
+      if (error) throw error
+      return
+    }
+    const db = localSignIn(normalized, name)
+    setLocalSession(normalized)
     setUser({ id: db.userId, email: db.email, displayName: db.displayName })
   }, [])
 

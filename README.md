@@ -16,7 +16,9 @@ Aplicación de calendario estilo Outlook con:
 ## Configuración Supabase
 
 1. Creá un proyecto en Supabase.
-2. En el SQL Editor, ejecutá el contenido de [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql).
+2. En el SQL Editor, ejecutá las migraciones en orden:
+   - [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql)
+   - [`supabase/migrations/002_security_hardening.sql`](supabase/migrations/002_security_hardening.sql)
 3. Copiá `.env.example` a `.env` y completá:
 
 ```env

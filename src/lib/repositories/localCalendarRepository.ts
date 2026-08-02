@@ -1,6 +1,7 @@
 import type { Calendar, CalendarEvent, EventDraft, EventException } from '../../types'
 import { createId } from '../id'
 import { loadLocalDb, saveLocalDb } from '../localStore'
+import { sanitizeCalendarName, sanitizeColor, sanitizeEventDraft } from '../security'
 import type { CalendarRepository, CalendarSnapshot } from './types'
 import { emptySnapshot } from './types'
 
@@ -68,8 +69,8 @@ export function createLocalCalendarRepository(): CalendarRepository {
       const calendar: Calendar = {
         id: createId(),
         user_id: userId,
-        name,
-        color,
+        name: sanitizeCalendarName(name),
+        color: sanitizeColor(color),
         is_default: false,
         visible: true,
         created_at: new Date().toISOString(),
@@ -81,6 +82,7 @@ export function createLocalCalendarRepository(): CalendarRepository {
     },
 
     async saveEvent(state, userId, draft: EventDraft) {
+      draft = sanitizeEventDraft(draft)
       const now = new Date().toISOString()
 
       if (draft.id && draft.editScope === 'single' && draft.occurrenceOriginalStartsAt) {

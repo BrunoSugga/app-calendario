@@ -15,10 +15,17 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     try {
+      if (isCloud && mode === 'register' && password.length < 8) {
+        throw new Error('La contraseña debe tener al menos 8 caracteres')
+      }
       if (mode === 'login') {
-        await signIn(email.trim(), password || 'local')
+        await signIn(email.trim(), isCloud ? password : 'local')
       } else {
-        await signUp(email.trim(), password || 'local', displayName.trim() || email.split('@')[0])
+        await signUp(
+          email.trim(),
+          isCloud ? password : 'local',
+          displayName.trim() || email.split('@')[0] || 'Usuario',
+        )
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo autenticar')
@@ -72,6 +79,8 @@ export function LoginPage() {
             <input
               type="password"
               required
+              minLength={8}
+              maxLength={128}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
