@@ -774,13 +774,25 @@ textarea:focus {
 
 .modal {
   width: min(520px, 100%);
+  max-height: min(90vh, 860px);
   background: var(--panel-2);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   padding: 1rem;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
   border-radius: 4px;
+  overflow: hidden;
+}
+
+.modal-body {
+  display: grid;
+  gap: 0.65rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-right: 0.15rem;
 }
 
 .modal-header,
@@ -788,6 +800,13 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  flex-wrap: wrap;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-soft);
 }
 
 .modal-header h2 {

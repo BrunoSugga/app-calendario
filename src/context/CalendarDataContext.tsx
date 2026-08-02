@@ -76,7 +76,19 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       const next = await repo.load()
       applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar datos')
+      const message =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Error al cargar datos'
+      const needsMigration =
+        /task_runs|column .*kind|schema cache|does not exist/i.test(message)
+      setError(
+        needsMigration
+          ? `${message}. Ejecutá en Supabase la migración 003_event_kinds.sql y recargá.`
+          : message || 'Error al cargar datos',
+      )
     } finally {
       setLoading(false)
     }

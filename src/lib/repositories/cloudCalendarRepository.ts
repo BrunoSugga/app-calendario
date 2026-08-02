@@ -34,6 +34,29 @@ function mapEvent(row: Record<string, unknown>): CalendarEvent {
   }
 }
 
+function isMissingRelationError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false
+  const code = String(error.code ?? '')
+  const message = String(error.message ?? '').toLowerCase()
+  return (
+    code === '42P01' ||
+    code === 'PGRST205' ||
+    message.includes('does not exist') ||
+    message.includes('could not find the table') ||
+    message.includes('schema cache')
+  )
+}
+
+function throwRepoError(error: { message?: string } | Error, fallback: string): never {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error.message === 'string' && error.message
+        ? error.message
+        : fallback
+  throw new Error(message)
+}
+
 export function createCloudCalendarRepository(client: SupabaseClient): CalendarRepository {
   const load = async (): Promise<CalendarSnapshot> => {
     const [cRes, eRes, xRes, tRes] = await Promise.all([
@@ -42,15 +65,25 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
       client.from('event_exceptions').select('*'),
       client.from('task_runs').select('*').order('created_at', { ascending: false }),
     ])
-    if (cRes.error) throw cRes.error
-    if (eRes.error) throw eRes.error
-    if (xRes.error) throw xRes.error
-    if (tRes.error) throw tRes.error
+    if (cRes.error) throwRepoError(cRes.error, 'No se pudieron cargar los calendarios')
+    if (eRes.error) throwRepoError(eRes.error, 'No se pudieron cargar los eventos')
+    if (xRes.error) throwRepoError(xRes.error, 'No se pudieron cargar las excepciones')
+
+    let taskRuns: TaskRun[] = []
+    if (tRes.error) {
+      // Antes de correr 003_event_kinds.sql la tabla no existe: no bloquear el calendario.
+      if (!isMissingRelationError(tRes.error)) {
+        throwRepoError(tRes.error, 'No se pudo cargar el historial de tareas')
+      }
+    } else {
+      taskRuns = (tRes.data ?? []) as TaskRun[]
+    }
+
     return {
       calendars: (cRes.data ?? []) as Calendar[],
       events: ((eRes.data ?? []) as Record<string, unknown>[]).map(mapEvent),
       exceptions: (xRes.data ?? []) as EventException[],
-      taskRuns: (tRes.data ?? []) as TaskRun[],
+      taskRuns,
     }
   }
 

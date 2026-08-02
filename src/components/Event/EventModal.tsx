@@ -175,6 +175,22 @@ export function EventModal({
     }
   }
 
+  const canCompleteTask =
+    isTask && isEdit && master?.task_status === 'in_progress' && Boolean(onCompleteTask)
+
+  async function handleCompleteTask() {
+    if (!master || !onCompleteTask) return
+    setBusy(true)
+    setError(null)
+    try {
+      await onCompleteTask(master.id, completeNote)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo terminar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <form className="modal" onMouseDown={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
@@ -185,6 +201,7 @@ export function EventModal({
           </button>
         </header>
 
+        <div className="modal-body">
         <label>
           Tipo
           <select
@@ -368,34 +385,15 @@ export function EventModal({
                   Empezar tarea
                 </button>
               )}
-              {master.task_status === 'in_progress' && onCompleteTask && (
-                <>
-                  <label>
-                    Observación (opcional)
-                    <textarea
-                      rows={2}
-                      value={completeNote}
-                      onChange={(e) => setCompleteNote(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true)
-                      try {
-                        await onCompleteTask(master.id, completeNote)
-                      } catch (err) {
-                        setError(err instanceof Error ? err.message : 'No se pudo terminar')
-                      } finally {
-                        setBusy(false)
-                      }
-                    }}
-                  >
-                    Tarea terminada
-                  </button>
-                </>
+              {canCompleteTask && (
+                <label>
+                  Observación (opcional)
+                  <textarea
+                    rows={2}
+                    value={completeNote}
+                    onChange={(e) => setCompleteNote(e.target.value)}
+                  />
+                </label>
               )}
             </div>
 
@@ -416,6 +414,7 @@ export function EventModal({
         )}
 
         {error && <p className="form-error">{error}</p>}
+        </div>
 
         <footer className="modal-footer">
           {isEdit && onDelete && (
@@ -442,7 +441,17 @@ export function EventModal({
           <button type="button" className="btn" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn primary" disabled={busy}>
+          {canCompleteTask && (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={busy}
+              onClick={() => void handleCompleteTask()}
+            >
+              Tarea terminada
+            </button>
+          )}
+          <button type="submit" className="btn" disabled={busy}>
             Guardar
           </button>
         </footer>
