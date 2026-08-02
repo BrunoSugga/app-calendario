@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { formatShortWeekday, formatTime, isSameDay } from '../../domain/dates'
+import { kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -63,21 +64,38 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
             const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
             const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
             const top = (startMin / 60) * hourHeight
-            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 22)
-            const timeLabel = `${formatTime(occ.startsAt)} - ${formatTime(occ.endsAt)}`
+            const rawHeight = ((endMin - startMin) / 60) * hourHeight
+            const height = Math.max(rawHeight, occ.kind === 'reminder' ? 20 : 22)
+            const timeLabel =
+              occ.kind === 'reminder'
+                ? formatTime(occ.startsAt)
+                : `${formatTime(occ.startsAt)} - ${formatTime(occ.endsAt)}`
+            const status =
+              occ.kind === 'task' ? ` · ${taskStatusLabel(occ.taskStatus)}` : ''
             return (
               <button
                 key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                 type="button"
-                className={height < 36 ? 'event-block short' : 'event-block'}
+                className={[
+                  'event-block',
+                  height < 36 ? 'short' : '',
+                  `kind-${occ.kind}`,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 style={{ top, height, background: occ.color }}
-                title={`${occ.title} (${timeLabel})`}
+                title={`${kindLabel(occ.kind)}: ${occ.title}${status}`}
                 onClick={(e) => {
                   e.stopPropagation()
                   onOccurrenceClick(occ)
                 }}
               >
-                <strong>{occ.title || 'Sin título'}</strong>
+                <strong>
+                  <span className="kind-glyph" aria-hidden>
+                    {kindGlyph(occ.kind)}
+                  </span>{' '}
+                  {occ.title || 'Sin título'}
+                </strong>
                 <span>{timeLabel}</span>
               </button>
             )

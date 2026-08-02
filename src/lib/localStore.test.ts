@@ -48,6 +48,12 @@ describe('localStore', () => {
       all_day: false,
       reminder_minutes: 15,
       rrule: null,
+      kind: 'event',
+      task_status: null,
+      task_started_at: null,
+      task_completed_at: null,
+      task_duration_ms: null,
+      task_note: null,
       created_at: '2026-08-01T00:00:00.000Z',
       updated_at: '2026-08-01T00:00:00.000Z',
     })

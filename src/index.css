@@ -627,6 +627,69 @@ textarea:focus {
   opacity: 0.95;
 }
 
+.event-block .kind-glyph,
+.month-event .kind-glyph,
+.agenda-title .kind-glyph {
+  opacity: 0.9;
+  font-size: 0.85em;
+}
+
+.event-block.kind-reminder {
+  border-left: 3px solid rgba(255, 255, 255, 0.85);
+}
+
+.event-block.kind-task {
+  border-style: dashed;
+}
+
+.month-event.kind-reminder {
+  border-radius: 999px;
+  padding-inline: 0.45rem;
+}
+
+.month-event.kind-task {
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+}
+
+.filter-check {
+  margin-top: 0.55rem;
+}
+
+.hint.tiny,
+.muted.tiny {
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+  line-height: 1.3;
+}
+
+.task-panel {
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+  background: #1a2030;
+}
+
+.task-panel h3,
+.task-panel h4 {
+  margin: 0;
+  color: var(--celeste-soft);
+  font-size: 0.95rem;
+}
+
+.task-actions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.task-history ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .month-view {
   height: 100%;
   display: flex;
@@ -827,11 +890,29 @@ textarea:focus {
 }
 
 .reminder-actions {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.snooze-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.snooze-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-right: 0.15rem;
+}
+
+.reminder-main-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0.65rem 0.75rem;
-  border-top: 1px solid var(--border-soft);
   justify-content: flex-end;
 }
 

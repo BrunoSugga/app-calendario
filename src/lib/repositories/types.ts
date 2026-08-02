@@ -1,9 +1,16 @@
-import type { Calendar, CalendarEvent, EventDraft, EventException } from '../../types'
+import type {
+  Calendar,
+  CalendarEvent,
+  EventDraft,
+  EventException,
+  TaskRun,
+} from '../../types'
 
 export type CalendarSnapshot = {
   calendars: Calendar[]
   events: CalendarEvent[]
   exceptions: EventException[]
+  taskRuns: TaskRun[]
 }
 
 export type CalendarRepository = {
@@ -32,6 +39,13 @@ export type CalendarRepository = {
     scope: 'single' | 'series',
     originalStartsAt?: string,
   ) => Promise<CalendarSnapshot>
+  startTask: (state: CalendarSnapshot, userId: string, eventId: string) => Promise<CalendarSnapshot>
+  completeTask: (
+    state: CalendarSnapshot,
+    userId: string,
+    eventId: string,
+    note?: string,
+  ) => Promise<CalendarSnapshot>
   /** Optional realtime subscription; returns unsubscribe */
   subscribe?: (onChange: () => void) => () => void
 }
@@ -40,4 +54,5 @@ export const emptySnapshot = (): CalendarSnapshot => ({
   calendars: [],
   events: [],
   exceptions: [],
+  taskRuns: [],
 })

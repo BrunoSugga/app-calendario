@@ -25,9 +25,27 @@ describe('security helpers', () => {
       all_day: false,
       reminder_minutes: 15,
       rrule: null,
+      kind: 'event',
     })
     expect(draft.title).toBe('Hola')
     expect(draft.description.length).toBe(5000)
+    expect(draft.kind).toBe('event')
+  })
+
+  it('fuerza ends_at = starts_at en recordatorios', () => {
+    const draft = sanitizeEventDraft({
+      calendar_id: 'c1',
+      title: 'Llamar',
+      description: '',
+      starts_at: '2026-08-02T10:00:00.000Z',
+      ends_at: '2026-08-02T11:00:00.000Z',
+      all_day: true,
+      reminder_minutes: 0,
+      rrule: null,
+      kind: 'reminder',
+    })
+    expect(draft.ends_at).toBe(draft.starts_at)
+    expect(draft.all_day).toBe(false)
   })
 
   it('rechaza color inválido y tokens inseguros', () => {

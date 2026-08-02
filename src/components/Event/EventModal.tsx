@@ -1,6 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
-import type { Calendar, CalendarEvent, EventDraft, Occurrence } from '../../types'
+import type {
+  Calendar,
+  CalendarEvent,
+  EventDraft,
+  EventKind,
+  Occurrence,
+  TaskRun,
+} from '../../types'
 import {
   WEEKDAY_OPTIONS,
   buildRRule,
@@ -10,14 +17,19 @@ import {
   type RecurrencePreset,
   type WeekdayIndex,
 } from '../../domain/recurrence'
+import { formatDuration, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 
 type Props = {
   open: boolean
   calendars: Calendar[]
+  events?: CalendarEvent[]
+  taskRuns?: TaskRun[]
   initial?: Partial<EventDraft> & { occurrence?: Occurrence; master?: CalendarEvent }
   onClose: () => void
   onSave: (draft: EventDraft) => Promise<void>
   onDelete?: (scope: 'single' | 'series') => Promise<void>
+  onStartTask?: (eventId: string) => Promise<void>
+  onCompleteTask?: (eventId: string, note: string) => Promise<void>
 }
 
 function toLocalInput(value: string | Date | undefined, fallback: Date): string {
@@ -26,8 +38,20 @@ function toLocalInput(value: string | Date | undefined, fallback: Date): string 
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export function EventModal({ open, calendars, initial, onClose, onSave, onDelete }: Props) {
+export function EventModal({
+  open,
+  calendars,
+  events = [],
+  taskRuns = [],
+  initial,
+  onClose,
+  onSave,
+  onDelete,
+  onStartTask,
+  onCompleteTask,
+}: Props) {
   const defaultCal = calendars.find((c) => c.is_default) ?? calendars[0]
+  const [kind, setKind] = useState<EventKind>('event')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [calendarId, setCalendarId] = useState('')
@@ -38,12 +62,24 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
   const [recurrence, setRecurrence] = useState<RecurrencePreset>('none')
   const [weekdays, setWeekdays] = useState<WeekdayIndex[]>([])
   const [editScope, setEditScope] = useState<'single' | 'series'>('series')
+  const [completeNote, setCompleteNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isEdit = Boolean(initial?.id)
   const isRecurring = Boolean(initial?.master?.rrule || initial?.occurrence?.isRecurring)
   const showDayPicker = recurrence === 'weekly' || recurrence === 'monthly'
+  const master = useMemo(() => {
+    if (!initial?.id) return initial?.master
+    return events.find((e) => e.id === initial.id) ?? initial.master
+  }, [events, initial?.id, initial?.master])
+  const isReminder = kind === 'reminder'
+  const isTask = kind === 'task'
+
+  const runsForEvent = useMemo(
+    () => (initial?.id ? taskRuns.filter((r) => r.event_id === initial.id).slice(0, 5) : []),
+    [taskRuns, initial?.id],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -54,17 +90,21 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
       ? new Date(initial.ends_at)
       : initial?.occurrence?.endsAt ?? addMinutes(start, 30)
     const rrule = initial?.rrule ?? initial?.master?.rrule ?? null
+    const nextKind =
+      initial?.kind ?? initial?.master?.kind ?? initial?.occurrence?.kind ?? 'event'
 
+    setKind(nextKind)
     setTitle(initial?.title ?? initial?.occurrence?.title ?? '')
     setDescription(initial?.description ?? initial?.occurrence?.description ?? '')
     setCalendarId(initial?.calendar_id ?? initial?.occurrence?.calendarId ?? defaultCal?.id ?? '')
     setStartsAt(toLocalInput(start, start))
-    setEndsAt(toLocalInput(end, end))
-    setAllDay(initial?.all_day ?? initial?.occurrence?.allDay ?? false)
+    setEndsAt(toLocalInput(nextKind === 'reminder' ? start : end, end))
+    setAllDay(nextKind === 'reminder' ? false : (initial?.all_day ?? initial?.occurrence?.allDay ?? false))
     setReminder(initial?.reminder_minutes ?? initial?.occurrence?.reminderMinutes ?? 15)
     setRecurrence(presetFromRRule(rrule))
     setWeekdays(weekdaysFromRRule(rrule, start))
     setEditScope(isRecurring ? 'single' : 'series')
+    setCompleteNote(initial?.master?.task_note ?? '')
     setError(null)
   }, [open, initial, defaultCal, isRecurring])
 
@@ -105,7 +145,7 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
     setError(null)
     try {
       const startDate = new Date(startsAt)
-      const endDate = new Date(endsAt)
+      const endDate = kind === 'reminder' ? startDate : new Date(endsAt)
       const rrule =
         isEdit && editScope === 'single'
           ? initial?.master?.rrule ?? null
@@ -118,9 +158,10 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
         description: description.trim(),
         starts_at: formatISO(startDate),
         ends_at: formatISO(endDate),
-        all_day: allDay,
+        all_day: kind === 'reminder' ? false : allDay,
         reminder_minutes: reminder,
         rrule: isEdit && editScope === 'single' ? initial?.master?.rrule ?? null : rrule,
+        kind,
         occurrenceOriginalStartsAt: initial?.occurrence
           ? formatISO(initial.occurrence.originalStartsAt)
           : undefined,
@@ -138,11 +179,31 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
     <div className="modal-backdrop" onMouseDown={onClose}>
       <form className="modal" onMouseDown={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <header className="modal-header">
-          <h2>{isEdit ? 'Editar evento' : 'Nuevo evento'}</h2>
+          <h2>{isEdit ? `Editar ${kindLabel(kind).toLowerCase()}` : `Nuevo ${kindLabel(kind).toLowerCase()}`}</h2>
           <button type="button" className="btn icon" onClick={onClose} aria-label="Cerrar">
             ×
           </button>
         </header>
+
+        <label>
+          Tipo
+          <select
+            value={kind}
+            onChange={(e) => {
+              const next = e.target.value as EventKind
+              setKind(next)
+              if (next === 'reminder') {
+                setEndsAt(startsAt)
+                setAllDay(false)
+              }
+            }}
+            disabled={isEdit && isRecurring && editScope === 'single'}
+          >
+            <option value="event">Evento</option>
+            <option value="reminder">Recordatorio</option>
+            <option value="task">Tarea</option>
+          </select>
+        </label>
 
         <label>
           Título
@@ -162,30 +223,37 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
 
         <div className="form-row">
           <label>
-            Inicio
+            {isReminder ? 'Fecha y hora' : 'Inicio'}
             <input
               type="datetime-local"
               value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
+              onChange={(e) => {
+                setStartsAt(e.target.value)
+                if (isReminder) setEndsAt(e.target.value)
+              }}
             />
           </label>
-          <label>
-            Fin
-            <input
-              type="datetime-local"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-            />
-          </label>
+          {!isReminder && (
+            <label>
+              Fin
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+              />
+            </label>
+          )}
         </div>
 
-        <label className="checkbox">
-          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          Todo el día
-        </label>
+        {!isReminder && (
+          <label className="checkbox">
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            Todo el día
+          </label>
+        )}
 
         <label>
-          Recordatorio
+          Aviso
           <select value={reminder} onChange={(e) => setReminder(Number(e.target.value))}>
             <option value={0}>Al inicio</option>
             <option value={5}>5 minutos antes</option>
@@ -231,11 +299,6 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
                     )
                   })}
                 </div>
-                <p className="hint">
-                  {recurrence === 'weekly'
-                    ? 'Se repetirá cada semana en los días marcados.'
-                    : 'Se repetirá cada mes en esos días de la semana.'}
-                </p>
               </fieldset>
             )}
           </>
@@ -263,14 +326,94 @@ export function EventModal({ open, calendars, initial, onClose, onSave, onDelete
           </fieldset>
         )}
 
-        <label>
-          Descripción
-          <textarea
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
+        {!isReminder && (
+          <label>
+            Descripción
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
+        )}
+
+        {isTask && isEdit && master && (
+          <section className="task-panel">
+            <h3>Estado de la tarea</h3>
+            <p>
+              <strong>{taskStatusLabel(master.task_status)}</strong>
+              {master.task_duration_ms != null && (
+                <> · Duración: {formatDuration(master.task_duration_ms)}</>
+              )}
+            </p>
+            {master.task_note && <p className="muted">Última nota: {master.task_note}</p>}
+
+            <div className="task-actions">
+              {master.task_status !== 'in_progress' && onStartTask && (
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      await onStartTask(master.id)
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'No se pudo empezar')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  Empezar tarea
+                </button>
+              )}
+              {master.task_status === 'in_progress' && onCompleteTask && (
+                <>
+                  <label>
+                    Observación (opcional)
+                    <textarea
+                      rows={2}
+                      value={completeNote}
+                      onChange={(e) => setCompleteNote(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true)
+                      try {
+                        await onCompleteTask(master.id, completeNote)
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'No se pudo terminar')
+                      } finally {
+                        setBusy(false)
+                      }
+                    }}
+                  >
+                    Tarea terminada
+                  </button>
+                </>
+              )}
+            </div>
+
+            {runsForEvent.length > 0 && (
+              <div className="task-history">
+                <h4>Historial reciente</h4>
+                <ul>
+                  {runsForEvent.map((run) => (
+                    <li key={run.id}>
+                      {formatDuration(run.duration_ms)}
+                      {run.note ? ` — ${run.note}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
 
         {error && <p className="form-error">{error}</p>}
 

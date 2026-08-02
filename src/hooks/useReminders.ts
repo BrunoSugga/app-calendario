@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { addMinutes, format } from 'date-fns'
+import { addMinutes, format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
-import { openReminderWindow } from '../lib/tauri'
+import {
+  consumeQueuedOpenEvent,
+  consumeQueuedStartTask,
+  isTauri,
+  openReminderWindow,
+} from '../lib/tauri'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -26,10 +31,75 @@ function snoozeActive(eventId: string): boolean {
   return until > Date.now()
 }
 
-export function useReminders(): void {
+type Options = {
+  onOpenInCalendar?: (payload: { eventId: string; startsAt: string }) => void
+  onStartTask?: (eventId: string) => void
+}
+
+export function useReminders(options: Options = {}): void {
   const { user } = useAuth()
   const { events, calendars, exceptions } = useCalendarData()
   const firedRef = useRef<Set<string>>(loadFired())
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  useEffect(() => {
+    function handleOpen(payload: { eventId: string; startsAt: string }) {
+      optionsRef.current.onOpenInCalendar?.(payload)
+    }
+    function handleStart(eventId: string) {
+      optionsRef.current.onStartTask?.(eventId)
+    }
+
+    function onDomOpen(ev: Event) {
+      const detail = (ev as CustomEvent<{ eventId: string; startsAt: string }>).detail
+      if (detail?.eventId) handleOpen(detail)
+    }
+    function onDomStart(ev: Event) {
+      const detail = (ev as CustomEvent<{ eventId: string }>).detail
+      if (detail?.eventId) handleStart(detail.eventId)
+    }
+
+    window.addEventListener('calendario:open-event', onDomOpen)
+    window.addEventListener('calendario:start-task', onDomStart)
+
+    let unlistenOpen: (() => void) | undefined
+    let unlistenStart: (() => void) | undefined
+    let cancelled = false
+
+    if (isTauri()) {
+      void (async () => {
+        const { listen } = await import('@tauri-apps/api/event')
+        if (cancelled) return
+        unlistenOpen = await listen<{ eventId: string; startsAt: string }>(
+          'calendario:open-event',
+          (event) => handleOpen(event.payload),
+        )
+        unlistenStart = await listen<{ eventId: string }>(
+          'calendario:start-task',
+          (event) => handleStart(event.payload.eventId),
+        )
+      })()
+    }
+
+    const pollPending = () => {
+      const open = consumeQueuedOpenEvent()
+      if (open) handleOpen(open)
+      const startId = consumeQueuedStartTask()
+      if (startId) handleStart(startId)
+    }
+    pollPending()
+    const pendingId = window.setInterval(pollPending, 2000)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('calendario:open-event', onDomOpen)
+      window.removeEventListener('calendario:start-task', onDomStart)
+      window.clearInterval(pendingId)
+      unlistenOpen?.()
+      unlistenStart?.()
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -54,12 +124,19 @@ export function useReminders(): void {
         saveFired(firedRef.current)
 
         const calendar = calendars.find((c) => c.id === occ.calendarId)
+        const timeLabel =
+          occ.kind === 'reminder'
+            ? format(occ.startsAt, 'HH:mm')
+            : `${format(occ.startsAt, 'HH:mm')} - ${format(occ.endsAt, 'HH:mm')}`
+
         await openReminderWindow({
           title: occ.title,
-          timeLabel: `${format(occ.startsAt, 'HH:mm')} - ${format(occ.endsAt, 'HH:mm')}`,
+          timeLabel,
           calendarName: calendar?.name ?? 'Calendario',
           description: occ.description,
           eventId: occ.eventId,
+          kind: occ.kind,
+          startsAt: formatISO(occ.startsAt),
         })
       }
     }

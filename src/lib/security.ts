@@ -1,9 +1,11 @@
-import type { EventDraft } from '../types'
+import type { EventDraft, EventKind } from '../types'
+import { normalizeEventKind } from '../types'
 
 const MAX_TITLE = 200
 const MAX_DESCRIPTION = 5000
 const MAX_NAME = 120
 const MAX_COLOR = 32
+const MAX_NOTE = 2000
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function clampText(value: string, max: number): string {
@@ -37,16 +39,26 @@ export function sanitizeColor(color: string): string {
   return next.toUpperCase()
 }
 
+export function sanitizeTaskNote(note: string): string {
+  return clampText(note, MAX_NOTE)
+}
+
 export function sanitizeEventDraft(draft: EventDraft): EventDraft {
   const title = clampText(draft.title, MAX_TITLE)
   if (!title) throw new Error('El título es obligatorio')
 
+  const kind: EventKind = normalizeEventKind(draft.kind)
   const starts = new Date(draft.starts_at)
-  const ends = new Date(draft.ends_at)
+  let ends = new Date(draft.ends_at)
+
+  if (kind === 'reminder') {
+    ends = starts
+  }
+
   if (Number.isNaN(starts.getTime()) || Number.isNaN(ends.getTime())) {
     throw new Error('Fecha de evento inválida')
   }
-  if (ends.getTime() < starts.getTime()) {
+  if (kind !== 'reminder' && ends.getTime() < starts.getTime()) {
     throw new Error('El fin del evento debe ser posterior al inicio')
   }
 
@@ -57,8 +69,12 @@ export function sanitizeEventDraft(draft: EventDraft): EventDraft {
 
   return {
     ...draft,
+    kind,
     title,
     description: clampText(draft.description ?? '', MAX_DESCRIPTION),
+    starts_at: starts.toISOString(),
+    ends_at: ends.toISOString(),
+    all_day: kind === 'reminder' ? false : draft.all_day,
     reminder_minutes: Math.floor(reminder),
     rrule: draft.rrule ? clampText(draft.rrule, 1000) : null,
   }

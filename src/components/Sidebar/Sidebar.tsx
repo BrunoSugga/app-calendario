@@ -1,9 +1,12 @@
 import { addMonths } from 'date-fns'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { endOfDay, formatDayHeader, formatTime, startOfDay } from '../../domain/dates'
 import { expandOccurrences, labelForRRule } from '../../domain/recurrence'
+import { kindGlyph, taskStatusLabel } from '../../domain/eventKind'
 import { useAuth } from '../../context/AuthContext'
 import { useCalendarData } from '../../context/CalendarDataContext'
+import { getAutostartEnabled, setAutostartEnabled } from '../../lib/autostart'
+import { isTauri } from '../../lib/tauri'
 import type { Occurrence } from '../../types'
 import { MiniCalendar } from './MiniCalendar'
 
@@ -11,9 +14,17 @@ type Props = {
   selectedDate: Date
   onSelectDate: (date: Date) => void
   onOpenOccurrence: (occ: Occurrence) => void
+  pendingTasksOnly: boolean
+  onPendingTasksOnlyChange: (value: boolean) => void
 }
 
-export function Sidebar({ selectedDate, onSelectDate, onOpenOccurrence }: Props) {
+export function Sidebar({
+  selectedDate,
+  onSelectDate,
+  onOpenOccurrence,
+  pendingTasksOnly,
+  onPendingTasksOnlyChange,
+}: Props) {
   const { user, signOut, isCloud } = useAuth()
   const {
     calendars,
@@ -25,6 +36,16 @@ export function Sidebar({ selectedDate, onSelectDate, onOpenOccurrence }: Props)
   } = useCalendarData()
   const [monthAnchor, setMonthAnchor] = useState(startOfDay(selectedDate))
   const [newName, setNewName] = useState('')
+  const [autostart, setAutostart] = useState(false)
+  const [autostartMsg, setAutostartMsg] = useState<string | null>(null)
+  const desktop = isTauri()
+
+  useEffect(() => {
+    if (!desktop) return
+    void getAutostartEnabled()
+      .then(setAutostart)
+      .catch(() => setAutostart(false))
+  }, [desktop])
 
   const dayOccurrences = useMemo(() => {
     return expandOccurrences(
@@ -113,6 +134,50 @@ export function Sidebar({ selectedDate, onSelectDate, onOpenOccurrence }: Props)
             +
           </button>
         </div>
+
+        <label className="checkbox filter-check">
+          <input
+            type="checkbox"
+            checked={pendingTasksOnly}
+            onChange={(e) => onPendingTasksOnlyChange(e.target.checked)}
+          />
+          Solo tareas pendientes
+        </label>
+
+        <label className="checkbox filter-check" title="Solo app de escritorio (Tauri)">
+          <input
+            type="checkbox"
+            checked={autostart}
+            disabled={!desktop}
+            onChange={async (e) => {
+              const next = e.target.checked
+              setAutostartMsg(null)
+              try {
+                await setAutostartEnabled(next)
+                setAutostart(next)
+                setAutostartMsg(
+                  next
+                    ? 'Listo: la app se abrirá al iniciar Windows.'
+                    : 'Autostart desactivado.',
+                )
+              } catch (err) {
+                setAutostart(!next)
+                setAutostartMsg(
+                  err instanceof Error
+                    ? err.message
+                    : 'No se pudo cambiar el inicio con Windows. Revisá permisos del sistema.',
+                )
+              }
+            }}
+          />
+          Iniciar con Windows
+        </label>
+        <p className="hint tiny">
+          {desktop
+            ? 'Solo app de escritorio. Si Windows pide permiso, aceptalo al activarlo.'
+            : 'Disponible solo en la app instalada (no en el navegador).'}
+        </p>
+        {autostartMsg && <p className="muted tiny">{autostartMsg}</p>}
       </section>
 
       <section className="sidebar-section agenda">
@@ -122,14 +187,20 @@ export function Sidebar({ selectedDate, onSelectDate, onOpenOccurrence }: Props)
           {dayOccurrences.map((occ) => {
             const master = events.find((e) => e.id === occ.eventId)
             const recur = labelForRRule(master?.rrule ?? null)
+            const time =
+              occ.kind === 'reminder'
+                ? formatTime(occ.startsAt)
+                : `${formatTime(occ.startsAt)} - ${formatTime(occ.endsAt)}`
             return (
               <li key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}>
                 <button type="button" className="agenda-item" onClick={() => onOpenOccurrence(occ)}>
-                  <span className="agenda-time">
-                    {formatTime(occ.startsAt)} - {formatTime(occ.endsAt)}
-                  </span>
+                  <span className="agenda-time">{time}</span>
                   <span className="agenda-title">
+                    <span className="kind-glyph" aria-hidden>
+                      {kindGlyph(occ.kind)}
+                    </span>{' '}
                     {occ.title}
+                    {occ.kind === 'task' ? ` [${taskStatusLabel(occ.taskStatus)}]` : ''}
                     {recur ? ` (${recur})` : ''}
                   </span>
                 </button>

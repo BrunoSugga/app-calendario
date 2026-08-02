@@ -1,22 +1,56 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Calendar, CalendarEvent, EventDraft, EventException } from '../../types'
-import { sanitizeCalendarName, sanitizeColor, sanitizeEventDraft } from '../security'
+import type { Calendar, CalendarEvent, EventDraft, EventException, TaskRun } from '../../types'
+import { normalizeEventKind, normalizeTaskStatus } from '../../types'
+import {
+  sanitizeCalendarName,
+  sanitizeColor,
+  sanitizeEventDraft,
+  sanitizeTaskNote,
+} from '../security'
 import type { CalendarRepository, CalendarSnapshot } from './types'
+
+function mapEvent(row: Record<string, unknown>): CalendarEvent {
+  const kind = normalizeEventKind(row.kind)
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    calendar_id: String(row.calendar_id),
+    title: String(row.title ?? ''),
+    description: String(row.description ?? ''),
+    starts_at: String(row.starts_at),
+    ends_at: String(row.ends_at),
+    all_day: Boolean(row.all_day),
+    reminder_minutes: Number(row.reminder_minutes ?? 15),
+    rrule: (row.rrule as string | null) ?? null,
+    kind,
+    task_status: normalizeTaskStatus(row.task_status, kind),
+    task_started_at: (row.task_started_at as string | null) ?? null,
+    task_completed_at: (row.task_completed_at as string | null) ?? null,
+    task_duration_ms:
+      typeof row.task_duration_ms === 'number' ? row.task_duration_ms : null,
+    task_note: (row.task_note as string | null) ?? null,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  }
+}
 
 export function createCloudCalendarRepository(client: SupabaseClient): CalendarRepository {
   const load = async (): Promise<CalendarSnapshot> => {
-    const [cRes, eRes, xRes] = await Promise.all([
+    const [cRes, eRes, xRes, tRes] = await Promise.all([
       client.from('calendars').select('*').order('created_at'),
       client.from('events').select('*').order('starts_at'),
       client.from('event_exceptions').select('*'),
+      client.from('task_runs').select('*').order('created_at', { ascending: false }),
     ])
     if (cRes.error) throw cRes.error
     if (eRes.error) throw eRes.error
     if (xRes.error) throw xRes.error
+    if (tRes.error) throw tRes.error
     return {
       calendars: (cRes.data ?? []) as Calendar[],
-      events: (eRes.data ?? []) as CalendarEvent[],
+      events: ((eRes.data ?? []) as Record<string, unknown>[]).map(mapEvent),
       exceptions: (xRes.data ?? []) as EventException[],
+      taskRuns: (tRes.data ?? []) as TaskRun[],
     }
   }
 
@@ -53,7 +87,7 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
       return load()
     },
 
-    async saveEvent(_state, userId, draft: EventDraft) {
+    async saveEvent(state, userId, draft: EventDraft) {
       draft = sanitizeEventDraft(draft)
       if (draft.id && draft.editScope === 'single' && draft.occurrenceOriginalStartsAt) {
         const row = {
@@ -78,6 +112,7 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
         return load()
       }
 
+      const existing = draft.id ? state.events.find((e) => e.id === draft.id) : undefined
       const payload = {
         calendar_id: draft.calendar_id,
         title: draft.title,
@@ -87,6 +122,17 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
         all_day: draft.all_day,
         reminder_minutes: draft.reminder_minutes,
         rrule: draft.rrule,
+        kind: draft.kind,
+        task_status:
+          draft.kind === 'task'
+            ? existing?.kind === 'task'
+              ? existing.task_status ?? 'pending'
+              : 'pending'
+            : null,
+        task_started_at: draft.kind === 'task' ? (existing?.task_started_at ?? null) : null,
+        task_completed_at: draft.kind === 'task' ? (existing?.task_completed_at ?? null) : null,
+        task_duration_ms: draft.kind === 'task' ? (existing?.task_duration_ms ?? null) : null,
+        task_note: draft.kind === 'task' ? (existing?.task_note ?? null) : null,
         updated_at: new Date().toISOString(),
       }
 
@@ -129,6 +175,57 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
       return load()
     },
 
+    async startTask(_state, _userId, eventId) {
+      const now = new Date().toISOString()
+      const { error } = await client
+        .from('events')
+        .update({
+          task_status: 'in_progress',
+          task_started_at: now,
+          task_completed_at: null,
+          task_duration_ms: null,
+          updated_at: now,
+        })
+        .eq('id', eventId)
+        .eq('kind', 'task')
+      if (error) throw error
+      return load()
+    },
+
+    async completeTask(state, userId, eventId, note = '') {
+      const event = state.events.find((e) => e.id === eventId)
+      if (!event || event.kind !== 'task') return state
+      const startedAt = event.task_started_at ? new Date(event.task_started_at) : new Date()
+      const completedAt = new Date()
+      const durationMs = Math.max(0, completedAt.getTime() - startedAt.getTime())
+      const cleanNote = sanitizeTaskNote(note)
+      const now = completedAt.toISOString()
+
+      const { error: runErr } = await client.from('task_runs').insert({
+        event_id: eventId,
+        user_id: userId,
+        started_at: startedAt.toISOString(),
+        completed_at: now,
+        duration_ms: durationMs,
+        note: cleanNote,
+      })
+      if (runErr) throw runErr
+
+      const { error } = await client
+        .from('events')
+        .update({
+          task_status: 'done',
+          task_started_at: startedAt.toISOString(),
+          task_completed_at: now,
+          task_duration_ms: durationMs,
+          task_note: cleanNote || event.task_note,
+          updated_at: now,
+        })
+        .eq('id', eventId)
+      if (error) throw error
+      return load()
+    },
+
     subscribe(onChange) {
       const channel = client
         .channel('calendar-sync')
@@ -139,6 +236,7 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
           { event: '*', schema: 'public', table: 'event_exceptions' },
           onChange,
         )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'task_runs' }, onChange)
         .subscribe()
 
       return () => {

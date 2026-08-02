@@ -1,16 +1,18 @@
-import type { Calendar, CalendarEvent, EventException } from '../types'
+import type { Calendar, CalendarEvent, EventException, TaskRun } from '../types'
+import { normalizeEventKind, normalizeTaskStatus } from '../types'
 import { createId } from './id'
 import { clampText, isValidEmail } from './security'
 
 const KEY = 'calendario.local.v1'
 
-type LocalDb = {
+export type LocalDb = {
   userId: string
   email: string
   displayName: string
   calendars: Calendar[]
   events: CalendarEvent[]
   exceptions: EventException[]
+  taskRuns: TaskRun[]
 }
 
 function emptyDb(email: string, displayName: string): LocalDb {
@@ -34,11 +36,37 @@ function emptyDb(email: string, displayName: string): LocalDb {
     ],
     events: [],
     exceptions: [],
+    taskRuns: [],
   }
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function migrateEvent(raw: Record<string, unknown>): CalendarEvent {
+  const kind = normalizeEventKind(raw.kind)
+  return {
+    id: String(raw.id),
+    user_id: String(raw.user_id),
+    calendar_id: String(raw.calendar_id),
+    title: String(raw.title ?? ''),
+    description: String(raw.description ?? ''),
+    starts_at: String(raw.starts_at),
+    ends_at: String(raw.ends_at),
+    all_day: Boolean(raw.all_day),
+    reminder_minutes: Number(raw.reminder_minutes ?? 15),
+    rrule: (raw.rrule as string | null) ?? null,
+    kind,
+    task_status: normalizeTaskStatus(raw.task_status, kind),
+    task_started_at: (raw.task_started_at as string | null) ?? null,
+    task_completed_at: (raw.task_completed_at as string | null) ?? null,
+    task_duration_ms:
+      typeof raw.task_duration_ms === 'number' ? raw.task_duration_ms : null,
+    task_note: (raw.task_note as string | null) ?? null,
+    created_at: String(raw.created_at ?? new Date().toISOString()),
+    updated_at: String(raw.updated_at ?? new Date().toISOString()),
+  }
 }
 
 function isLocalDb(value: unknown): value is LocalDb {
@@ -59,7 +87,13 @@ export function loadLocalDb(): LocalDb | null {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (!isLocalDb(parsed)) return null
-    return parsed
+    const events = (parsed.events as unknown[]).map((e) =>
+      migrateEvent(e as Record<string, unknown>),
+    )
+    const taskRuns = Array.isArray(parsed.taskRuns)
+      ? (parsed.taskRuns as TaskRun[])
+      : []
+    return { ...parsed, events, taskRuns }
   } catch {
     return null
   }

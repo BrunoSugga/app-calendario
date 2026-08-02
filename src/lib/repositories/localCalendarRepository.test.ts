@@ -22,6 +22,7 @@ describe('localCalendarRepository', () => {
       all_day: false,
       reminder_minutes: 15,
       rrule: null,
+      kind: 'event',
     })
     expect(state.events).toHaveLength(1)
     expect(state.events[0].title).toBe('Reunión')
@@ -37,6 +38,7 @@ describe('localCalendarRepository', () => {
       all_day: false,
       reminder_minutes: 10,
       rrule: null,
+      kind: 'event',
       editScope: 'series',
     })
     expect(state.events[0].title).toBe('Reunión editada')
@@ -60,6 +62,7 @@ describe('localCalendarRepository', () => {
       all_day: false,
       reminder_minutes: 15,
       rrule: 'FREQ=DAILY',
+      kind: 'event',
     })
 
     const eventId = state.events[0].id
@@ -98,5 +101,38 @@ describe('localCalendarRepository', () => {
 
     state = await repo.toggleCalendarVisible(state, firstId)
     expect(state.calendars.find((c) => c.id === firstId)?.visible).toBe(false)
+  })
+
+  it('inicia y completa una tarea con historial', async () => {
+    const repo = createLocalCalendarRepository()
+    let state = await repo.load()
+    const calendarId = state.calendars[0].id
+    const userId = state.calendars[0].user_id
+
+    state = await repo.saveEvent(state, userId, {
+      calendar_id: calendarId,
+      title: 'Informe',
+      description: '',
+      starts_at: '2026-08-05T09:00:00.000Z',
+      ends_at: '2026-08-05T10:00:00.000Z',
+      all_day: false,
+      reminder_minutes: 5,
+      rrule: null,
+      kind: 'task',
+    })
+    expect(state.events[0].kind).toBe('task')
+    expect(state.events[0].task_status).toBe('pending')
+
+    const eventId = state.events[0].id
+    state = await repo.startTask(state, userId, eventId)
+    expect(state.events[0].task_status).toBe('in_progress')
+    expect(state.events[0].task_started_at).toBeTruthy()
+
+    state = await repo.completeTask(state, userId, eventId, 'listo')
+    expect(state.events[0].task_status).toBe('done')
+    expect(state.events[0].task_note).toBe('listo')
+    expect(state.events[0].task_duration_ms).toBeGreaterThanOrEqual(0)
+    expect(state.taskRuns).toHaveLength(1)
+    expect(state.taskRuns[0].note).toBe('listo')
   })
 })

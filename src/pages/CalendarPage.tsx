@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { Sidebar } from '../components/Sidebar/Sidebar'
 import { Toolbar } from '../components/Toolbar/Toolbar'
@@ -14,18 +14,69 @@ import { expandOccurrences } from '../domain/recurrence'
 import type { EventDraft, Occurrence, ViewMode } from '../types'
 
 export function CalendarPage() {
-  const { calendars, events, exceptions, loading, error, saveEvent, deleteEvent } =
-    useCalendarData()
+  const {
+    calendars,
+    events,
+    exceptions,
+    taskRuns,
+    loading,
+    error,
+    saveEvent,
+    deleteEvent,
+    startTask,
+    completeTask,
+  } = useCalendarData()
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()))
   const [view, setView] = useState<ViewMode>('day')
   const [zoom, setZoom] = useState(100)
   const [modalOpen, setModalOpen] = useState(false)
+  const [pendingTasksOnly, setPendingTasksOnly] = useState(false)
   const [draft, setDraft] = useState<
     (Partial<EventDraft> & { occurrence?: Occurrence; master?: (typeof events)[number] }) | undefined
   >()
+  const [focusEventId, setFocusEventId] = useState<string | null>(null)
 
-  useReminders()
+  useReminders({
+    onOpenInCalendar: (payload) => {
+      setSelectedDate(startOfDay(new Date(payload.startsAt)))
+      setView('day')
+      setFocusEventId(payload.eventId)
+    },
+    onStartTask: (eventId) => {
+      void startTask(eventId)
+    },
+  })
   useAppUpdater()
+
+  useEffect(() => {
+    if (!focusEventId) return
+    const master = events.find((e) => e.id === focusEventId)
+    if (!master) return
+    const occ = expandOccurrences(
+      [master],
+      calendars,
+      exceptions,
+      startOfDay(selectedDate),
+      new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000 - 1),
+    )[0]
+    if (!occ) return
+    setDraft({
+      id: occ.eventId,
+      calendar_id: occ.calendarId,
+      title: occ.title,
+      description: occ.description,
+      starts_at: formatISO(occ.startsAt),
+      ends_at: formatISO(occ.endsAt),
+      all_day: occ.allDay,
+      reminder_minutes: occ.reminderMinutes,
+      rrule: master.rrule,
+      kind: occ.kind,
+      occurrence: occ,
+      master,
+    })
+    setModalOpen(true)
+    setFocusEventId(null)
+  }, [focusEventId, events, calendars, exceptions, selectedDate])
 
   const range = useMemo(() => {
     if (view === 'day') return dayRange(selectedDate)
@@ -33,10 +84,11 @@ export function CalendarPage() {
     return monthGridRange(selectedDate)
   }, [view, selectedDate])
 
-  const occurrences = useMemo(
-    () => expandOccurrences(events, calendars, exceptions, range.start, range.end),
-    [events, calendars, exceptions, range],
-  )
+  const occurrences = useMemo(() => {
+    const all = expandOccurrences(events, calendars, exceptions, range.start, range.end)
+    if (!pendingTasksOnly) return all
+    return all.filter((o) => o.kind === 'task' && o.taskStatus === 'pending')
+  }, [events, calendars, exceptions, range, pendingTasksOnly])
 
   function openNewAt(slot: Date) {
     const defaultCal = calendars.find((c) => c.is_default) ?? calendars[0]
@@ -49,6 +101,7 @@ export function CalendarPage() {
       all_day: false,
       reminder_minutes: 15,
       rrule: null,
+      kind: 'event',
     })
     setModalOpen(true)
   }
@@ -65,6 +118,7 @@ export function CalendarPage() {
       all_day: occ.allDay,
       reminder_minutes: occ.reminderMinutes,
       rrule: master?.rrule ?? null,
+      kind: occ.kind,
       occurrence: occ,
       master,
     })
@@ -77,6 +131,8 @@ export function CalendarPage() {
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         onOpenOccurrence={openOccurrence}
+        pendingTasksOnly={pendingTasksOnly}
+        onPendingTasksOnlyChange={setPendingTasksOnly}
       />
       <main className="main-pane">
         <Toolbar
@@ -128,9 +184,13 @@ export function CalendarPage() {
       <EventModal
         open={modalOpen}
         calendars={calendars}
+        events={events}
+        taskRuns={taskRuns}
         initial={draft}
         onClose={() => setModalOpen(false)}
         onSave={saveEvent}
+        onStartTask={startTask}
+        onCompleteTask={completeTask}
         onDelete={
           draft?.id
             ? async (scope) => {

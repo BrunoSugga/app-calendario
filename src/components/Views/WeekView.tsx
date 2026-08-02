@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { eachDay, formatShortWeekday, formatTime, isSameDay, weekRange } from '../../domain/dates'
+import { kindGlyph, kindLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -64,21 +65,36 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
               const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
               const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
               const top = (startMin / 60) * hourHeight
-              const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+              const height = Math.max(
+                ((endMin - startMin) / 60) * hourHeight,
+                occ.kind === 'reminder' ? 18 : 20,
+              )
               const timeLabel = formatTime(occ.startsAt)
               return (
                 <button
                   key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                   type="button"
-                  className={height < 34 ? 'event-block compact short' : 'event-block compact'}
+                  className={[
+                    'event-block',
+                    'compact',
+                    height < 34 ? 'short' : '',
+                    `kind-${occ.kind}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   style={{ top, height, background: occ.color }}
-                  title={`${occ.title} (${timeLabel})`}
+                  title={`${kindLabel(occ.kind)}: ${occ.title}`}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOccurrenceClick(occ)
                   }}
                 >
-                  <strong>{occ.title || 'Sin título'}</strong>
+                  <strong>
+                    <span className="kind-glyph" aria-hidden>
+                      {kindGlyph(occ.kind)}
+                    </span>{' '}
+                    {occ.title || 'Sin título'}
+                  </strong>
                   <span>{timeLabel}</span>
                 </button>
               )

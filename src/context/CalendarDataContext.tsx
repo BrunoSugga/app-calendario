@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Calendar, CalendarEvent, EventDraft, EventException } from '../types'
+import type { Calendar, CalendarEvent, EventDraft, EventException, TaskRun } from '../types'
 import { useAuth } from './AuthContext'
 import {
   createCalendarRepository,
@@ -20,6 +20,7 @@ type CalendarDataContextValue = {
   calendars: Calendar[]
   events: CalendarEvent[]
   exceptions: EventException[]
+  taskRuns: TaskRun[]
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -28,6 +29,8 @@ type CalendarDataContextValue = {
   createCalendar: (name: string, color: string) => Promise<void>
   saveEvent: (draft: EventDraft) => Promise<void>
   deleteEvent: (eventId: string, scope: 'single' | 'series', originalStartsAt?: string) => Promise<void>
+  startTask: (eventId: string) => Promise<void>
+  completeTask: (eventId: string, note?: string) => Promise<void>
 }
 
 const CalendarDataContext = createContext<CalendarDataContextValue | null>(null)
@@ -37,10 +40,12 @@ function applySnapshot(
   setCalendars: (v: Calendar[]) => void,
   setEvents: (v: CalendarEvent[]) => void,
   setExceptions: (v: EventException[]) => void,
+  setTaskRuns: (v: TaskRun[]) => void,
 ) {
   setCalendars(snapshot.calendars)
   setEvents(snapshot.events)
   setExceptions(snapshot.exceptions)
+  setTaskRuns(snapshot.taskRuns)
 }
 
 export function CalendarDataProvider({ children }: { children: ReactNode }) {
@@ -48,19 +53,20 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
   const [calendars, setCalendars] = useState<Calendar[]>([])
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [exceptions, setExceptions] = useState<EventException[]>([])
+  const [taskRuns, setTaskRuns] = useState<TaskRun[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const repo: CalendarRepository = useMemo(() => createCalendarRepository(), [])
 
   const snapshot = useMemo(
-    (): CalendarSnapshot => ({ calendars, events, exceptions }),
-    [calendars, events, exceptions],
+    (): CalendarSnapshot => ({ calendars, events, exceptions, taskRuns }),
+    [calendars, events, exceptions, taskRuns],
   )
 
   const refresh = useCallback(async () => {
     if (!user) {
-      applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions)
+      applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions, setTaskRuns)
       return
     }
 
@@ -68,7 +74,7 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const next = await repo.load()
-      applySnapshot(next, setCalendars, setEvents, setExceptions)
+      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar datos')
     } finally {
@@ -91,7 +97,7 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     async (mutate: (state: CalendarSnapshot) => Promise<CalendarSnapshot>) => {
       if (!user) return
       const next = await mutate(snapshot)
-      applySnapshot(next, setCalendars, setEvents, setExceptions)
+      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
     },
     [user, snapshot],
   )
@@ -137,11 +143,28 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     [repo, runMutation, user],
   )
 
+  const startTask = useCallback(
+    async (eventId: string) => {
+      if (!user) return
+      await runMutation((state) => repo.startTask(state, user.id, eventId))
+    },
+    [repo, runMutation, user],
+  )
+
+  const completeTask = useCallback(
+    async (eventId: string, note?: string) => {
+      if (!user) return
+      await runMutation((state) => repo.completeTask(state, user.id, eventId, note))
+    },
+    [repo, runMutation, user],
+  )
+
   const value = useMemo(
     () => ({
       calendars,
       events,
       exceptions,
+      taskRuns,
       loading,
       error,
       refresh,
@@ -150,11 +173,14 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       createCalendar,
       saveEvent,
       deleteEvent,
+      startTask,
+      completeTask,
     }),
     [
       calendars,
       events,
       exceptions,
+      taskRuns,
       loading,
       error,
       refresh,
@@ -163,6 +189,8 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       createCalendar,
       saveEvent,
       deleteEvent,
+      startTask,
+      completeTask,
     ],
   )
 

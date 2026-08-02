@@ -151,6 +151,8 @@ function expandMaster(
         color: calendar.color,
         isRecurring: false,
         originalStartsAt: start,
+        kind: event.kind ?? 'event',
+        taskStatus: event.task_status ?? null,
       },
     ]
   }
@@ -194,6 +196,8 @@ function expandMaster(
       color: calendar.color,
       isRecurring: true,
       originalStartsAt: original,
+      kind: event.kind ?? 'event',
+      taskStatus: event.task_status ?? null,
     })
   }
 

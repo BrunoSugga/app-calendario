@@ -11,7 +11,14 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .setup(|app| {
       #[cfg(desktop)]
-      app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+      {
+        use tauri_plugin_autostart::MacosLauncher;
+        app.handle().plugin(tauri_plugin_autostart::init(
+          MacosLauncher::LaunchAgent,
+          None,
+        ))?;
+        app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+      }
 
       if cfg!(debug_assertions) {
         app.handle().plugin(

@@ -16,6 +16,9 @@
     "core:tray:default",
     "updater:default",
     "process:default",
-    "dialog:default"
+    "dialog:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

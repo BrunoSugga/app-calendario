@@ -66,13 +66,38 @@ describe('EventModal', () => {
     )
 
     await user.type(screen.getByLabelText(/Título/i), 'Standup')
+    await user.selectOptions(screen.getByLabelText(/^Tipo$/i), 'task')
     await user.selectOptions(screen.getByLabelText(/Repetición/i), 'weekly')
     expect(screen.getByText(/Días de la semana/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onSave.mock.calls[0][0].title).toBe('Standup')
+    expect(onSave.mock.calls[0][0].kind).toBe('task')
     expect(onSave.mock.calls[0][0].rrule).toContain('FREQ=WEEKLY')
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('oculta fin en recordatorios', async () => {
+    const user = userEvent.setup()
+    render(
+      <EventModal
+        open
+        calendars={calendars}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        initial={{
+          calendar_id: 'cal-1',
+          starts_at: '2026-08-05T10:00:00.000Z',
+          ends_at: '2026-08-05T11:00:00.000Z',
+          kind: 'reminder',
+        }}
+      />,
+    )
+
+    expect(screen.getByLabelText(/Fecha y hora/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Fin$/i)).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText(/^Tipo$/i), 'event')
+    expect(screen.getByLabelText(/^Fin$/i)).toBeInTheDocument()
   })
 })

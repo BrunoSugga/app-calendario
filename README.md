@@ -19,6 +19,7 @@ Aplicación de calendario estilo Outlook con:
 2. En el SQL Editor, ejecutá las migraciones en orden:
    - [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql)
    - [`supabase/migrations/002_security_hardening.sql`](supabase/migrations/002_security_hardening.sql)
+   - [`supabase/migrations/003_event_kinds.sql`](supabase/migrations/003_event_kinds.sql) (tipos Evento/Recordatorio/Tarea + historial)
 3. Copiá `.env.example` a `.env` y completá:
 
 ```env
