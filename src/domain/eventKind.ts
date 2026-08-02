@@ -12,6 +12,13 @@ export function kindGlyph(kind: EventKind): string {
   return '▦'
 }
 
+/** Color de bloque por tipo. Evento conserva el color del calendario. */
+export function kindColor(kind: EventKind, calendarColor: string): string {
+  if (kind === 'reminder') return '#D08A2A'
+  if (kind === 'task') return '#2F9B78'
+  return calendarColor || '#2F7FD4'
+}
+
 export function taskStatusLabel(status: TaskStatus | null | undefined): string {
   if (status === 'in_progress') return 'En curso'
   if (status === 'done') return 'Terminada'

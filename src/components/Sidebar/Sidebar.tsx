@@ -2,7 +2,7 @@ import { addMonths } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import { endOfDay, formatDayHeader, formatTime, startOfDay } from '../../domain/dates'
 import { expandOccurrences, labelForRRule } from '../../domain/recurrence'
-import { kindGlyph, taskStatusLabel } from '../../domain/eventKind'
+import { kindColor, kindGlyph, taskStatusLabel } from '../../domain/eventKind'
 import { useAuth } from '../../context/AuthContext'
 import { useCalendarData } from '../../context/CalendarDataContext'
 import { getAutostartEnabled, setAutostartEnabled } from '../../lib/autostart'
@@ -194,6 +194,11 @@ export function Sidebar({
             return (
               <li key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}>
                 <button type="button" className="agenda-item" onClick={() => onOpenOccurrence(occ)}>
+                  <span
+                    className="agenda-swatch"
+                    style={{ background: kindColor(occ.kind, occ.color) }}
+                    aria-hidden
+                  />
                   <span className="agenda-time">{time}</span>
                   <span className="agenda-title">
                     <span className="kind-glyph" aria-hidden>

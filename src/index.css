@@ -371,13 +371,24 @@ textarea:focus {
   color: var(--text);
   padding: 0.4rem 0.5rem;
   display: grid;
-  gap: 0.15rem;
+  grid-template-columns: 0.35rem 1fr;
+  column-gap: 0.45rem;
+  row-gap: 0.15rem;
   border-radius: 3px;
+  align-items: start;
 }
 
 .agenda-item:hover {
   border-color: var(--accent-soft);
   background: #42506a;
+}
+
+.agenda-swatch {
+  grid-row: 1 / span 2;
+  width: 0.35rem;
+  min-height: 100%;
+  border-radius: 2px;
+  align-self: stretch;
 }
 
 .agenda-time {
@@ -635,11 +646,12 @@ textarea:focus {
 }
 
 .event-block.kind-reminder {
-  border-left: 3px solid rgba(255, 255, 255, 0.85);
+  border-left: 3px solid rgba(255, 240, 200, 0.9);
 }
 
 .event-block.kind-task {
   border-style: dashed;
+  border-color: rgba(220, 255, 235, 0.55);
 }
 
 .month-event.kind-reminder {
@@ -648,7 +660,7 @@ textarea:focus {
 }
 
 .month-event.kind-task {
-  border: 1px dashed rgba(255, 255, 255, 0.55);
+  border: 1px dashed rgba(220, 255, 235, 0.55);
 }
 
 .filter-check {

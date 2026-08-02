@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { eachDay, formatShortWeekday, formatTime, isSameDay, weekRange } from '../../domain/dates'
-import { kindGlyph, kindLabel } from '../../domain/eventKind'
+import { kindColor, kindGlyph, kindLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -82,7 +82,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  style={{ top, height, background: occ.color }}
+                  style={{ top, height, background: kindColor(occ.kind, occ.color) }}
                   title={`${kindLabel(occ.kind)}: ${occ.title}`}
                   onClick={(e) => {
                     e.stopPropagation()

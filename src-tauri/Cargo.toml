@@ -1,6 +1,6 @@
 [package]
 name = "calendario"
-version = "1.0.4"
+version = "1.0.5"
 description = "BMatrix Calendario multi-dispositivo estilo Outlook"
 authors = ["Bruno"]
 license = "MIT"
@@ -23,6 +23,7 @@ tauri-plugin-log = "2"
 tauri-plugin-process = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2"

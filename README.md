@@ -20,6 +20,7 @@ Aplicación de calendario estilo Outlook con:
    - [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql)
    - [`supabase/migrations/002_security_hardening.sql`](supabase/migrations/002_security_hardening.sql)
    - [`supabase/migrations/003_event_kinds.sql`](supabase/migrations/003_event_kinds.sql) (tipos Evento/Recordatorio/Tarea + historial)
+   - [`supabase/migrations/004_task_runs_hardening.sql`](supabase/migrations/004_task_runs_hardening.sql) (RLS más estricto en historial de tareas)
 3. Copiá `.env.example` a `.env` y completá:
 
 ```env

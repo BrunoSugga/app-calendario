@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "reminder",
+  "description": "Permisos mínimos para ventanas de alarma (sin updater/autostart/crear ventanas)",
+  "windows": ["reminder-*"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:webview:allow-webview-close"
+  ]
+}

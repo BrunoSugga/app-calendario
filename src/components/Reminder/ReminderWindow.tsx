@@ -7,7 +7,7 @@ import {
   notifyMainStartTask,
   type ReminderPayload,
 } from '../../lib/tauri'
-import { isSafeReminderToken } from '../../lib/security'
+import { isSafeId, isSafeReminderToken } from '../../lib/security'
 
 const SNOOZE_OPTIONS = [
   { label: '5 min', minutes: 5 },
@@ -74,7 +74,8 @@ export function ReminderWindow() {
   }
 
   async function snooze(minutes: number) {
-    if (!data?.eventId) return
+    if (!data?.eventId || !isSafeId(data.eventId)) return
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 60 * 24 * 40) return
     const until = Date.now() + minutes * 60 * 1000
     localStorage.setItem(`calendario.snooze.${data.eventId}`, String(until))
     clearFiredForEvent(data.eventId)

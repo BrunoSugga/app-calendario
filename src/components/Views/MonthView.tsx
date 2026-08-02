@@ -1,5 +1,5 @@
 import { buildMonthCells, isSameDay, isSameMonth } from '../../domain/dates'
-import { kindGlyph } from '../../domain/eventKind'
+import { kindColor, kindGlyph } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 type Props = {
@@ -48,7 +48,7 @@ export function MonthView({
                     key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                     type="button"
                     className={`month-event kind-${occ.kind}`}
-                    style={{ background: occ.color }}
+                    style={{ background: kindColor(occ.kind, occ.color) }}
                     onClick={(e) => {
                       e.stopPropagation()
                       onOccurrenceClick(occ)

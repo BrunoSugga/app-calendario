@@ -6,7 +6,12 @@ const MAX_DESCRIPTION = 5000
 const MAX_NAME = 120
 const MAX_COLOR = 32
 const MAX_NOTE = 2000
+const MAX_RRULE = 300
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{2,80}$/
+const SAFE_TOKEN_RE = /^[A-Za-z0-9_-]{8,80}$/
+const SAFE_ISO_RE = /^\d{4}-\d{2}-\d{2}(?:[T ][\d:.+-Z]+)?$/
+const SAFE_RRULE_CHARS_RE = /^[A-Za-z0-9:;=,\n\r_\/+-]+$/
 
 export function clampText(value: string, max: number): string {
   return value.trim().slice(0, max)
@@ -43,9 +48,52 @@ export function sanitizeTaskNote(note: string): string {
   return clampText(note, MAX_NOTE)
 }
 
+export function isSafeId(value: string): boolean {
+  return SAFE_ID_RE.test(value)
+}
+
+export function isSafeIsoDate(value: string): boolean {
+  if (typeof value !== 'string' || value.length < 10 || value.length > 40) return false
+  if (!SAFE_ISO_RE.test(value)) return false
+  const t = Date.parse(value)
+  return Number.isFinite(t)
+}
+
+export function sanitizeRRule(rrule: string | null | undefined): string | null {
+  if (!rrule) return null
+  const next = clampText(rrule, MAX_RRULE)
+  if (!next) return null
+  if (!SAFE_RRULE_CHARS_RE.test(next)) {
+    throw new Error('Regla de repetición inválida')
+  }
+  if (!/FREQ=(DAILY|WEEKLY|MONTHLY)/i.test(next)) {
+    throw new Error('Regla de repetición inválida')
+  }
+  // Evita expansiones abusivas (ReDoS / bombas de ocurrencias)
+  const count = /(?:^|;)COUNT=(\d+)/i.exec(next)
+  if (count && Number(count[1]) > 366) {
+    throw new Error('Regla de repetición inválida')
+  }
+  const interval = /(?:^|;)INTERVAL=(\d+)/i.exec(next)
+  if (interval && Number(interval[1]) > 366) {
+    throw new Error('Regla de repetición inválida')
+  }
+  if ((next.match(/\n/g) ?? []).length > 2) {
+    throw new Error('Regla de repetición inválida')
+  }
+  return next
+}
+
 export function sanitizeEventDraft(draft: EventDraft): EventDraft {
   const title = clampText(draft.title, MAX_TITLE)
   if (!title) throw new Error('El título es obligatorio')
+
+  if (draft.id && !isSafeId(draft.id)) {
+    throw new Error('Identificador de evento inválido')
+  }
+  if (!isSafeId(draft.calendar_id)) {
+    throw new Error('Calendario inválido')
+  }
 
   const kind: EventKind = normalizeEventKind(draft.kind)
   const starts = new Date(draft.starts_at)
@@ -62,6 +110,13 @@ export function sanitizeEventDraft(draft: EventDraft): EventDraft {
     throw new Error('El fin del evento debe ser posterior al inicio')
   }
 
+  // Ventana razonable: ±20 años desde ahora
+  const now = Date.now()
+  const span = 20 * 365.25 * 24 * 60 * 60 * 1000
+  if (starts.getTime() < now - span || starts.getTime() > now + span) {
+    throw new Error('Fecha de evento fuera de rango')
+  }
+
   const reminder = Number(draft.reminder_minutes)
   if (!Number.isFinite(reminder) || reminder < 0 || reminder > 7 * 24 * 60) {
     throw new Error('Recordatorio inválido')
@@ -76,12 +131,12 @@ export function sanitizeEventDraft(draft: EventDraft): EventDraft {
     ends_at: ends.toISOString(),
     all_day: kind === 'reminder' ? false : draft.all_day,
     reminder_minutes: Math.floor(reminder),
-    rrule: draft.rrule ? clampText(draft.rrule, 1000) : null,
+    rrule: sanitizeRRule(draft.rrule),
   }
 }
 
 export function isSafeReminderToken(token: string): boolean {
-  return /^[A-Za-z0-9_-]{8,80}$/.test(token)
+  return SAFE_TOKEN_RE.test(token)
 }
 
 export function applyWebCsp(): void {
@@ -108,6 +163,8 @@ export function applyWebCsp(): void {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "img-src 'self' data: blob:",
+    "media-src 'self'",
+    "worker-src 'none'",
     "style-src 'self' 'unsafe-inline'",
     "script-src 'self'",
     `connect-src ${connect}`,

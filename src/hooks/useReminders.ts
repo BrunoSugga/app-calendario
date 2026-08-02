@@ -7,6 +7,7 @@ import {
   isTauri,
   openReminderWindow,
 } from '../lib/tauri'
+import { isSafeId, isSafeIsoDate } from '../lib/security'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -45,15 +46,17 @@ export function useReminders(options: Options = {}): void {
 
   useEffect(() => {
     function handleOpen(payload: { eventId: string; startsAt: string }) {
+      if (!isSafeId(payload.eventId) || !isSafeIsoDate(payload.startsAt)) return
       optionsRef.current.onOpenInCalendar?.(payload)
     }
     function handleStart(eventId: string) {
+      if (!isSafeId(eventId)) return
       optionsRef.current.onStartTask?.(eventId)
     }
 
     function onDomOpen(ev: Event) {
       const detail = (ev as CustomEvent<{ eventId: string; startsAt: string }>).detail
-      if (detail?.eventId) handleOpen(detail)
+      if (detail?.eventId && detail?.startsAt) handleOpen(detail)
     }
     function onDomStart(ev: Event) {
       const detail = (ev as CustomEvent<{ eventId: string }>).detail

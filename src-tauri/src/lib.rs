@@ -4,9 +4,21 @@ use tauri::{
   Manager, WindowEvent,
 };
 
+fn focus_main_window(app: &tauri::AppHandle) {
+  if let Some(window) = app.get_webview_window("main") {
+    let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_focus();
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    // Debe ir primero: si ya hay una instancia, enfoca la ventana y sale.
+    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+      focus_main_window(app);
+    }))
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_dialog::init())
     .setup(|app| {
@@ -38,10 +50,7 @@ pub fn run() {
         .tooltip("BMatrix Calendario")
         .on_menu_event(|app, event| match event.id.as_ref() {
           "show" => {
-            if let Some(window) = app.get_webview_window("main") {
-              let _ = window.show();
-              let _ = window.set_focus();
-            }
+            focus_main_window(app);
           }
           "quit" => {
             app.exit(0);
@@ -55,11 +64,7 @@ pub fn run() {
             ..
           } = event
           {
-            let app = tray.app_handle();
-            if let Some(window) = app.get_webview_window("main") {
-              let _ = window.show();
-              let _ = window.set_focus();
-            }
+            focus_main_window(tray.app_handle());
           }
         })
         .build(app)?;

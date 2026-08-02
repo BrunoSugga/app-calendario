@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertCloudPassword,
+  isSafeId,
+  isSafeIsoDate,
   isSafeReminderToken,
   isValidEmail,
   sanitizeColor,
   sanitizeEventDraft,
+  sanitizeRRule,
 } from './security'
 
 describe('security helpers', () => {
@@ -53,5 +56,17 @@ describe('security helpers', () => {
     expect(() => sanitizeColor('red')).toThrow(/Color inválido/)
     expect(isSafeReminderToken('abc_123-XYZ')).toBe(true)
     expect(isSafeReminderToken('../evil')).toBe(false)
+    expect(isSafeId('cal-1')).toBe(true)
+    expect(isSafeId('../x')).toBe(false)
+    expect(isSafeIsoDate('2026-08-02T10:00:00.000Z')).toBe(true)
+    expect(isSafeIsoDate('not-a-date')).toBe(false)
+  })
+
+  it('acepta rrules del generador y rechaza abusivas', () => {
+    const weekly = 'DTSTART:20260803T100000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,WE'
+    expect(sanitizeRRule(weekly)).toBe(weekly)
+    expect(() => sanitizeRRule('FREQ=DAILY;COUNT=99999')).toThrow(/inválida/)
+    expect(() => sanitizeRRule('FREQ=YEARLY')).toThrow(/inválida/)
+    expect(() => sanitizeRRule('javascript:alert(1)')).toThrow(/inválida/)
   })
 })

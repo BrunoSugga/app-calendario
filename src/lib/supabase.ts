@@ -8,8 +8,11 @@ function isAllowedSupabaseUrl(value: string | undefined): value is string {
   try {
     const parsed = new URL(value)
     if (parsed.protocol !== 'https:') return false
-    // Proyectos Supabase o URL custom HTTPS
-    return Boolean(parsed.hostname)
+    // Sin credenciales embebidas ni hosts vacíos
+    if (parsed.username || parsed.password) return false
+    if (!parsed.hostname || parsed.hostname.includes('..')) return false
+    // Proyectos Supabase o dominio HTTPS propio (sin IP cruda opcional)
+    return Boolean(parsed.hostname.includes('.'))
   } catch {
     return false
   }
