@@ -63,22 +63,22 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
             const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
             const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
             const top = (startMin / 60) * hourHeight
-            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 22)
+            const timeLabel = `${formatTime(occ.startsAt)} - ${formatTime(occ.endsAt)}`
             return (
               <button
                 key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                 type="button"
-                className="event-block"
+                className={height < 36 ? 'event-block short' : 'event-block'}
                 style={{ top, height, background: occ.color }}
+                title={`${occ.title} (${timeLabel})`}
                 onClick={(e) => {
                   e.stopPropagation()
                   onOccurrenceClick(occ)
                 }}
               >
-                <strong>{occ.title}</strong>
-                <span>
-                  {formatTime(occ.startsAt)} - {formatTime(occ.endsAt)}
-                </span>
+                <strong>{occ.title || 'Sin título'}</strong>
+                <span>{timeLabel}</span>
               </button>
             )
           })}

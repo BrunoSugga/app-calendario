@@ -32,3 +32,8 @@ src-tauri/gen
 
 # Installers locales (no subir binarios)
 instaladores/
+
+# Clave privada de firmado Tauri (NUNCA subir)
+.tauri/*.key
+.tauri/key-password.txt
+!.tauri/*.key.pub

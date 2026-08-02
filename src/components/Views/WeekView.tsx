@@ -64,20 +64,22 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
               const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
               const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
               const top = (startMin / 60) * hourHeight
-              const height = Math.max(((endMin - startMin) / 60) * hourHeight, 18)
+              const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+              const timeLabel = formatTime(occ.startsAt)
               return (
                 <button
                   key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                   type="button"
-                  className="event-block compact"
+                  className={height < 34 ? 'event-block compact short' : 'event-block compact'}
                   style={{ top, height, background: occ.color }}
+                  title={`${occ.title} (${timeLabel})`}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOccurrenceClick(occ)
                   }}
                 >
-                  <strong>{occ.title}</strong>
-                  <span>{formatTime(occ.startsAt)}</span>
+                  <strong>{occ.title || 'Sin título'}</strong>
+                  <span>{timeLabel}</span>
                 </button>
               )
             })}

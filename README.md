@@ -66,6 +66,19 @@ npm run tauri:build
 
 El build de escritorio genera instaladores Windows (NSIS `.exe` y MSI) en `src-tauri/target/release/bundle/`.
 
+## Actualizaciones automáticas (escritorio)
+
+La app de escritorio usa el updater de Tauri + GitHub Releases.
+
+1. Al abrir, si hay una versión nueva pregunta si querés actualizar.
+2. Para publicar: Actions → **Release desktop** → Run workflow con la versión (ej. `1.0.1`).
+3. Secretos requeridos en GitHub:
+   - `TAURI_SIGNING_PRIVATE_KEY` (contenido de `.tauri/bmx-calendario.key`)
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene password)
+   - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
+
+La primera vez hay que instalar el `.exe` con updater (1.0.1+). Después se actualiza sola.
+
 ## Uso rápido
 
 1. Entrar con correo (y contraseña si hay Supabase).

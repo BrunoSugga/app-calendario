@@ -8,6 +8,7 @@ import { MonthView } from '../components/Views/MonthView'
 import { EventModal } from '../components/Event/EventModal'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useReminders } from '../hooks/useReminders'
+import { useAppUpdater } from '../hooks/useAppUpdater'
 import { dayRange, monthGridRange, navigateView, startOfDay, weekRange } from '../domain/dates'
 import { expandOccurrences } from '../domain/recurrence'
 import type { EventDraft, Occurrence, ViewMode } from '../types'
@@ -24,6 +25,7 @@ export function CalendarPage() {
   >()
 
   useReminders()
+  useAppUpdater()
 
   const range = useMemo(() => {
     if (view === 'day') return dayRange(selectedDate)
