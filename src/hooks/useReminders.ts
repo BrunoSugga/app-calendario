@@ -3,7 +3,7 @@ import { format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
 import {
   reminderFireKey,
-  reminderScanRange,
+  reminderScanRangeWithWorkWeek,
   selectDueReminders,
 } from '../domain/reminders'
 import {
@@ -47,7 +47,7 @@ type Options = {
 
 export function useReminders(options: Options = {}): void {
   const { user } = useAuth()
-  const { events, calendars, exceptions } = useCalendarData()
+  const { events, calendars, exceptions, workWeek } = useCalendarData()
   const firedRef = useRef<Set<string>>(loadFired())
   const optionsRef = useRef(options)
   optionsRef.current = options
@@ -144,7 +144,7 @@ export function useReminders(options: Options = {}): void {
     const tick = async () => {
       firedRef.current = loadFired()
       const now = new Date()
-      const range = reminderScanRange(now)
+      const range = reminderScanRangeWithWorkWeek(now, workWeek)
       const occurrences = expandOccurrences(
         events,
         calendars,
@@ -152,7 +152,10 @@ export function useReminders(options: Options = {}): void {
         range.start,
         range.end,
       )
-      const due = selectDueReminders(occurrences, now, firedRef.current, { snoozeActive })
+      const due = selectDueReminders(occurrences, now, firedRef.current, {
+        snoozeActive,
+        workWeek,
+      })
 
       for (const occ of due) {
         const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
@@ -187,5 +190,5 @@ export function useReminders(options: Options = {}): void {
     }, 15000)
 
     return () => window.clearInterval(id)
-  }, [user, events, calendars, exceptions])
+  }, [user, events, calendars, exceptions, workWeek])
 }

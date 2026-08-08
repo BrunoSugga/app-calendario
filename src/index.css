@@ -222,6 +222,76 @@ textarea:focus {
   margin-top: 0.5rem;
 }
 
+.work-week-modal {
+  width: min(420px, 100%);
+}
+
+.work-week-modal label {
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.work-week-modal .modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.work-week-modal fieldset.work-days {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.work-week-modal fieldset.work-days legend {
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.work-days-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.work-day-chip {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.work-day-chip:hover {
+  border-color: var(--accent, #3d9be0);
+}
+
+.work-day-chip.active {
+  background: var(--accent, #3d9be0);
+  border-color: var(--accent, #3d9be0);
+  color: #fff;
+}
+
+.work-hours-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.work-week-mute {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  grid-template-columns: none !important;
+}
+
 .hint {
   margin: 0.45rem 0 0;
   font-size: 0.8rem;

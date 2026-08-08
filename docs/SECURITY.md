@@ -88,8 +88,9 @@ sequenceDiagram
 
 ### RLS / DB
 
-- Migraciones `001`–`006` aplicadas.
+- Migraciones `001`–`007` (aplicar `007_work_week_settings.sql` en proyectos que aún no la tengan).
 - Admin no lee calendarios ajenos; solo gestiona altas.
+- `work_week_settings`: 1 fila por usuario; RLS select/insert/update/delete own; trigger exige que `work_calendar_id` (si no null) pertenezca al mismo `user_id`.
 
 ---
 

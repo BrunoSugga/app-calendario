@@ -25,17 +25,17 @@ Detección: `src/lib/supabase.ts` → `isCloudMode`.
 src/
   components/     UI (Auth, Event, Views, Reminder, Sidebar, Toolbar)
   context/        AuthContext, CalendarDataContext
-  domain/         fechas, recurrencia, kinds, reschedule
+  domain/         fechas, recurrencia, kinds, reschedule, reminders, workWeek
   hooks/          recordatorios, updater
   lib/
     security.ts   sanitización / CSP web
     authLink.ts   consume invite/recovery sin pisar otra sesión
     invite.ts     llama Edge Function invite-user
     supabase.ts   cliente anon + PKCE (detectSessionInUrl=false)
-    localStore.ts modo local
-    repositories/ local vs cloud
+    localStore.ts modo local (+ workWeek opcional)
+    repositories/ local vs cloud (+ workWeekSettings)
   pages/          CalendarPage
-supabase/migrations/   esquema + RLS
+supabase/migrations/   esquema + RLS (incl. 007 work_week_settings)
 supabase/functions/    Edge Functions (invite-user)
 src-tauri/             app escritorio + capabilities
 docs/                  contexto del proyecto (leer al inicio de sesión)
@@ -50,8 +50,10 @@ Tablas principales (todas con RLS):
 - `events` — eventos / recordatorios / tareas (`kind`)
 - `event_exceptions` — excepciones de recurrencia
 - `task_runs` — historial de ejecuciones de tareas
+- `work_week_settings` — semana laboral (calendario laboral, días, horario, mute fuera de jornada)
 
 Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendario default.
+Las preferencias de semana laboral se crean al primer guardado (defaults en cliente si no hay fila).
 
 ## Auth (cloud)
 
@@ -69,8 +71,9 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 ## Avisos / recordatorios (web + desktop)
 
 - Motor: `useReminders` (poll ~15s) → `openReminderWindow` (`src/lib/tauri.ts`).
-- Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `selectDueReminders`) + tests en `reminders.test.ts`.
+- Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `reminderScanRangeWithWorkWeek`, `selectDueReminders`) + `src/domain/workWeek.ts` + tests.
 - Escaneo: mira **gracia atrás** (5 min) + horizonte 24 h. Sin el lookback, un `kind=reminder` (`ends_at === starts_at`) desaparecía del expand apenas pasaba el segundo de inicio.
+- **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). Los demás calendarios usan la gracia de 5 min habitual.
 - `fired` en `localStorage` solo se marca **después** de abrir el aviso (si falla el webview/popup no se consume el disparo).
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
@@ -85,7 +88,8 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 
 ## UI principal
 
-- Sidebar brand: logo + título + **rueda de ajustes** (menú: Invitar usuario si admin, Salir).
+- Sidebar brand: logo + título + **rueda de ajustes** (menú: Semana laboral, Invitar usuario si admin, Salir).
+- Semana laboral: modal para calendario laboral, días L–D, horario (default L–V 08:00–17:00) y “No molestar fuera del horario laboral”.
 - Updater desktop vía GitHub Releases (`release.yml`).
 
 ## Escritorio (Tauri)

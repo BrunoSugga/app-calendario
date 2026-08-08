@@ -63,6 +63,22 @@ describe('localStore', () => {
     expect(loaded?.events[0].title).toBe('Demo')
   })
 
+  it('persiste workWeek y tolera dbs viejas sin el campo', () => {
+    const db = localSignIn('bruno@example.com', 'Bruno')
+    expect(loadLocalDb()?.workWeek).toBeUndefined()
+    db.workWeek = {
+      workCalendarId: db.calendars[0].id,
+      workDays: [1, 2, 3, 4, 5],
+      startMinute: 480,
+      endMinute: 1020,
+      muteOutsideHours: true,
+    }
+    saveLocalDb(db)
+    const loaded = loadLocalDb()
+    expect(loaded?.workWeek?.workCalendarId).toBe(db.calendars[0].id)
+    expect(loaded?.workWeek?.muteOutsideHours).toBe(true)
+  })
+
   it('maneja JSON inválido', () => {
     localStorage.setItem('calendario.local.v1', '{not-json')
     expect(loadLocalDb()).toBeNull()

@@ -1,3 +1,5 @@
+import type { WorkWeekSettings } from '../domain/workWeek'
+import { normalizeWorkWeekSettings } from '../domain/workWeek'
 import type { Calendar, CalendarEvent, EventException, TaskRun } from '../types'
 import { normalizeEventKind, normalizeTaskStatus } from '../types'
 import { createId } from './id'
@@ -13,6 +15,7 @@ export type LocalDb = {
   events: CalendarEvent[]
   exceptions: EventException[]
   taskRuns: TaskRun[]
+  workWeek?: WorkWeekSettings
 }
 
 function emptyDb(email: string, displayName: string): LocalDb {
@@ -93,7 +96,11 @@ export function loadLocalDb(): LocalDb | null {
     const taskRuns = Array.isArray(parsed.taskRuns)
       ? (parsed.taskRuns as TaskRun[])
       : []
-    return { ...parsed, events, taskRuns }
+    const workWeek =
+      'workWeek' in parsed && parsed.workWeek != null
+        ? normalizeWorkWeekSettings(parsed.workWeek)
+        : undefined
+    return { ...parsed, events, taskRuns, workWeek }
   } catch {
     return null
   }

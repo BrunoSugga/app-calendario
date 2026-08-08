@@ -10,6 +10,7 @@ import { isTauri } from '../../lib/tauri'
 import type { Occurrence } from '../../types'
 import { InviteUserModal } from '../Auth/InviteUserModal'
 import { MiniCalendar } from './MiniCalendar'
+import { WorkWeekModal } from './WorkWeekModal'
 
 type Props = {
   selectedDate: Date
@@ -51,6 +52,7 @@ export function Sidebar({
   const [autostart, setAutostart] = useState(false)
   const [autostartMsg, setAutostartMsg] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [workWeekOpen, setWorkWeekOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
   const desktop = isTauri()
@@ -109,6 +111,17 @@ export function Sidebar({
           </button>
           {settingsOpen && (
             <div className="sidebar-settings-menu" role="menu">
+              <button
+                type="button"
+                className="sidebar-settings-item"
+                role="menuitem"
+                onClick={() => {
+                  setSettingsOpen(false)
+                  setWorkWeekOpen(true)
+                }}
+              >
+                Semana laboral
+              </button>
               {isCloud && isAdmin && (
                 <button
                   type="button"
@@ -143,6 +156,7 @@ export function Sidebar({
       </div>
 
       <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <WorkWeekModal open={workWeekOpen} onClose={() => setWorkWeekOpen(false)} />
 
       <div className="mini-cal-stack">
         <MiniCalendar

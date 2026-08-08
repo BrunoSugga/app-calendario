@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Calendar, CalendarEvent, EventDraft, EventException, TaskRun } from '../types'
+import { DEFAULT_WORK_WEEK, type WorkWeekSettings } from '../domain/workWeek'
 import { useAuth } from './AuthContext'
 import {
   createCalendarRepository,
@@ -15,12 +16,17 @@ import {
   type CalendarRepository,
   type CalendarSnapshot,
 } from '../lib/repositories'
+import {
+  createWorkWeekSettingsRepository,
+  type WorkWeekSettingsRepository,
+} from '../lib/repositories/workWeekSettings'
 
 type CalendarDataContextValue = {
   calendars: Calendar[]
   events: CalendarEvent[]
   exceptions: EventException[]
   taskRuns: TaskRun[]
+  workWeek: WorkWeekSettings
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -31,6 +37,7 @@ type CalendarDataContextValue = {
   deleteEvent: (eventId: string, scope: 'single' | 'series', originalStartsAt?: string) => Promise<void>
   startTask: (eventId: string) => Promise<void>
   completeTask: (eventId: string, note?: string) => Promise<void>
+  saveWorkWeek: (settings: WorkWeekSettings) => Promise<void>
 }
 
 const CalendarDataContext = createContext<CalendarDataContextValue | null>(null)
@@ -54,10 +61,15 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [exceptions, setExceptions] = useState<EventException[]>([])
   const [taskRuns, setTaskRuns] = useState<TaskRun[]>([])
+  const [workWeek, setWorkWeek] = useState<WorkWeekSettings>({ ...DEFAULT_WORK_WEEK })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const repo: CalendarRepository = useMemo(() => createCalendarRepository(), [])
+  const workWeekRepo: WorkWeekSettingsRepository = useMemo(
+    () => createWorkWeekSettingsRepository(),
+    [],
+  )
 
   const snapshot = useMemo(
     (): CalendarSnapshot => ({ calendars, events, exceptions, taskRuns }),
@@ -67,14 +79,24 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!user) {
       applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions, setTaskRuns)
+      setWorkWeek({ ...DEFAULT_WORK_WEEK })
       return
     }
 
     setLoading(true)
     setError(null)
     try {
-      const next = await repo.load()
+      const [next, nextWorkWeek] = await Promise.all([repo.load(), workWeekRepo.load()])
       applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
+      // Si el calendario laboral ya no existe, no lo referenciamos en UI
+      if (
+        nextWorkWeek.workCalendarId &&
+        !next.calendars.some((c) => c.id === nextWorkWeek.workCalendarId)
+      ) {
+        setWorkWeek({ ...nextWorkWeek, workCalendarId: null })
+      } else {
+        setWorkWeek(nextWorkWeek)
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -83,16 +105,16 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
             ? String((err as { message: unknown }).message)
             : 'Error al cargar datos'
       const needsMigration =
-        /task_runs|column .*kind|schema cache|does not exist/i.test(message)
+        /task_runs|work_week_settings|column .*kind|schema cache|does not exist/i.test(message)
       setError(
         needsMigration
-          ? `${message}. Ejecutá en Supabase la migración 003_event_kinds.sql y recargá.`
+          ? `${message}. Ejecutá en Supabase las migraciones pendientes (p. ej. 003 / 007) y recargá.`
           : message || 'Error al cargar datos',
       )
     } finally {
       setLoading(false)
     }
-  }, [user, repo])
+  }, [user, repo, workWeekRepo])
 
   useEffect(() => {
     void refresh()
@@ -171,12 +193,22 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     [repo, runMutation, user],
   )
 
+  const saveWorkWeek = useCallback(
+    async (settings: WorkWeekSettings) => {
+      if (!user) return
+      const next = await workWeekRepo.save(settings)
+      setWorkWeek(next)
+    },
+    [user, workWeekRepo],
+  )
+
   const value = useMemo(
     () => ({
       calendars,
       events,
       exceptions,
       taskRuns,
+      workWeek,
       loading,
       error,
       refresh,
@@ -187,12 +219,14 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       deleteEvent,
       startTask,
       completeTask,
+      saveWorkWeek,
     }),
     [
       calendars,
       events,
       exceptions,
       taskRuns,
+      workWeek,
       loading,
       error,
       refresh,
@@ -203,6 +237,7 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       deleteEvent,
       startTask,
       completeTask,
+      saveWorkWeek,
     ],
   )
 
