@@ -247,11 +247,6 @@ export async function openReminderWindow(payload: {
   startsAt: string
   originalStartsAt: string
 }): Promise<void> {
-  if (!isTauri()) {
-    window.alert(`${payload.title}\n${payload.timeLabel}\n${payload.calendarName}`)
-    return
-  }
-
   if (
     !isSafeId(payload.eventId) ||
     !isSafeIsoDate(payload.startsAt) ||
@@ -261,13 +256,34 @@ export async function openReminderWindow(payload: {
     return
   }
 
-  const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
   const token = storeReminderPayload(payload)
+  const reminderQuery = `reminder=1&t=${encodeURIComponent(token)}`
+
+  if (!isTauri()) {
+    const url = new URL(import.meta.env.BASE_URL || '/', window.location.origin)
+    url.searchParams.set('reminder', '1')
+    url.searchParams.set('t', token)
+    const popup = window.open(
+      url.toString(),
+      `calendario-reminder-${payload.eventId.slice(0, 24)}`,
+      'popup=yes,width=440,height=460,resizable=no,scrollbars=yes',
+    )
+    if (!popup) {
+      window.alert(
+        `${payload.title}\n${payload.timeLabel}\n${payload.calendarName}\n\nPermití ventanas emergentes para ver el aviso completo.`,
+      )
+      return
+    }
+    popup.focus()
+    return
+  }
+
+  const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
   const safeEvent = payload.eventId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 8)
   const label = `reminder-${safeEvent}-${Date.now()}`
 
   const win = new WebviewWindow(label, {
-    url: `/?reminder=1&t=${encodeURIComponent(token)}`,
+    url: `/?${reminderQuery}`,
     title: 'Recordatorio',
     width: 440,
     height: 460,
