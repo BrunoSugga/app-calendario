@@ -51,17 +51,17 @@ Sin esas variables, la app arranca en **modo local**.
 
 Deploy en **Cloudflare Pages** (GitHub Pages apagado). Detalle: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-- **URL actual:** https://bmx-calendario.pages.dev  
-- **Custom (cuando Active):** https://calendario.bmatrix.org  
+- **URL canónica:** https://calendario.bmatrix.org  
+- **Fallback Pages:** https://bmx-calendario.pages.dev  
 - Workflow: `Deploy Cloudflare Pages` (push a `main`)
 - Secrets CI: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 
 En Supabase → **Authentication → URL Configuration**:
 
-1. **Site URL:** mientras el custom esté *Verifying*, usá `https://bmx-calendario.pages.dev`. Cuando esté Active → `https://calendario.bmatrix.org`.
+1. **Site URL:** `https://calendario.bmatrix.org`
 2. **Redirect URLs:**
-   - `https://bmx-calendario.pages.dev/**`
    - `https://calendario.bmatrix.org/**`
+   - `https://bmx-calendario.pages.dev/**`
    - `http://localhost:5173/**`
 
 Altas de usuario: solo el **admin** invita (cualquier correo; sidebar → Invitar usuario). Si el correo ya existe, se reenvía recovery. Borrar usuarios: Dashboard Supabase → Authentication → Users.

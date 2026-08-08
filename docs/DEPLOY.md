@@ -6,32 +6,22 @@ Actualizar este archivo cuando cambie el host, `VITE_BASE`, secrets o redirects 
 
 | Entorno | URL |
 |---------|-----|
-| Producción Pages (usar ahora) | **https://bmx-calendario.pages.dev** |
-| Custom domain (objetivo) | **https://calendario.bmatrix.org** |
+| Producción (canónica) | **https://calendario.bmatrix.org** |
+| Pages fallback | **https://bmx-calendario.pages.dev** |
 | Dev local | http://localhost:5173 |
 
 - Proyecto Cloudflare Pages: **`bmx-calendario`**
-- Account ID (GitHub secret): ya cargado como `CLOUDFLARE_ACCOUNT_ID`
+- Custom domain `calendario.bmatrix.org`: **Active** (2026-08-08)
 - Workflow: `.github/workflows/deploy-cloudflare.yml` (push a `main`)
-- GitHub Pages: **apagado** (`.github/workflows/deploy-pages.yml` disabled)
+- GitHub Pages: **apagado**
 
-## ¿Hay que correr algo local?
+## Supabase Auth URLs (con dominio Active)
 
-**No.** Pages es estático en CDN. No es como Informes (`informes.bmatrix.org` + túnel `cloudflared`).
-
-## Custom domain vs Site URL (importante)
-
-Mientras `calendario.bmatrix.org` en Cloudflare esté **Verifying** (no Active):
-
-1. Supabase → Authentication → **URL Configuration** → **Site URL** = `https://bmx-calendario.pages.dev`
-2. Redirect URLs (mantener las tres):
-   - `https://bmx-calendario.pages.dev/**`
+1. **Site URL:** `https://calendario.bmatrix.org`
+2. **Redirect URLs:**
    - `https://calendario.bmatrix.org/**`
+   - `https://bmx-calendario.pages.dev/**`
    - `http://localhost:5173/**`
-
-Cuando el dominio custom pase a **Active**, podés poner Site URL = `https://calendario.bmatrix.org`.
-
-Si Site URL apunta a un dominio que aún no responde, los mails de invite/recovery fallan o caen en login vacío.
 
 ## Build / CI
 
@@ -54,8 +44,8 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - [x] Proyecto Pages `bmx-calendario` + deploy Action OK
 - [x] Secrets Cloudflare en GitHub
 - [x] Redirect URLs en Supabase (pages.dev + calendario + localhost)
-- [ ] `calendario.bmatrix.org` **Active** en Cloudflare
-- [ ] Site URL alineada al host que realmente responde
+- [x] `calendario.bmatrix.org` **Active** en Cloudflare
+- [ ] Site URL Supabase = `https://calendario.bmatrix.org` (hacerlo al quedar Active)
 - [ ] Invite + set-password probado en incógnito
 - [ ] (Opcional) Cloudflare Access después
 

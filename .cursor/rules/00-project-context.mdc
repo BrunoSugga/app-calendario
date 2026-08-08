@@ -24,8 +24,8 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 
 ## Recordatorios operativos (2026-08)
 
-- Web: `bmx-calendario.pages.dev`. Custom `calendario.bmatrix.org` puede estar Verifying.
-- Mientras Verifying: Supabase Site URL = pages.dev (no el custom).
+- Web canónica: `https://calendario.bmatrix.org` (Active). Fallback: `bmx-calendario.pages.dev`.
+- Site URL Supabase = `https://calendario.bmatrix.org`.
 - `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
 - Probar invites en incógnito.
 - Avisos web = popup (`?reminder=1`); ver `docs/ARCHITECTURE.md`. Permitir emergentes en el dominio.

@@ -73,10 +73,10 @@ sequenceDiagram
 | `Edge Function returned a non-2xx` | Error real oculto (ya se parsea) | Ver mensaje en UI; user ya existe → recovery |
 | Cambia clave del admin | Sesión admin + link invite (bug viejo) | Ya mitigado con `authLink`; usar incógnito |
 
-**URL Configuration recomendada (mientras custom domain Verifying):**
+**URL Configuration (dominio Active):**
 
-- Site URL: `https://bmx-calendario.pages.dev`
-- Redirect URLs: `https://bmx-calendario.pages.dev/**`, `https://calendario.bmatrix.org/**`, `http://localhost:5173/**`
+- Site URL: `https://calendario.bmatrix.org`
+- Redirect URLs: `https://calendario.bmatrix.org/**`, `https://bmx-calendario.pages.dev/**`, `http://localhost:5173/**`
 
 ### Edge Function `invite-user`
 
@@ -110,9 +110,9 @@ npm test
 - [x] Edge Function deployada (invite + recovery resent)
 - [x] Signup público off
 - [x] Cloudflare Pages live
-- [ ] Site URL = host que responde hoy (`pages.dev` hasta Active)
-- [ ] Invite OK en incógnito (pendiente cooldown rate limit)
-- [ ] `calendario.bmatrix.org` Active → actualizar Site URL
+- [x] `calendario.bmatrix.org` Active
+- [ ] Site URL = `https://calendario.bmatrix.org`
+- [ ] Invite OK en incógnito (tras cooldown rate limit si aplica)
 - [ ] Rotar tokens pegados en chat
 
 ## Deuda menor

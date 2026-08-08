@@ -85,7 +85,7 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 
 ## Deploy web
 
-- **Live:** `https://bmx-calendario.pages.dev` (Pages `bmx-calendario`).
-- **Custom:** `https://calendario.bmatrix.org` (hasta Active, Site URL de Auth = pages.dev).
+- **Canónica:** `https://calendario.bmatrix.org` (Active).
+- **Fallback:** `https://bmx-calendario.pages.dev`.
 - GitHub Pages deshabilitado. Detalle: `docs/DEPLOY.md`.
 - En web, los avisos requieren **permitir ventanas emergentes** en el dominio.

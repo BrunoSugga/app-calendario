@@ -43,8 +43,9 @@ Actualizá los docs afectados en la misma PR/cambio:
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
-- **Web live:** `https://bmx-calendario.pages.dev` (proyecto Cloudflare Pages `bmx-calendario`).
-- **Custom domain:** `calendario.bmatrix.org` — puede estar en *Verifying*; hasta que esté **Active**, Site URL de Supabase debe ser `https://bmx-calendario.pages.dev`.
+- **Web live:** `https://calendario.bmatrix.org` (también `https://bmx-calendario.pages.dev`).
+- **Custom domain:** `calendario.bmatrix.org` → **Active** en Cloudflare Pages.
+- **Site URL Supabase:** `https://calendario.bmatrix.org` (Redirect URLs: custom + pages.dev + localhost).
 - **Invites:** cualquier email; si el user ya existe → Edge Function reenvía recovery.
 - **Rate limit mails Supabase (free):** error `email rate limit exceeded` → esperar ~30–60 min; no spamear invites.
 - **Borrar usuarios:** solo en Supabase → Authentication → Users (no hay UI en la app).
