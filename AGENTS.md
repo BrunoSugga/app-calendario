@@ -51,3 +51,4 @@ Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 - **GitHub Pages:** workflow deshabilitado.
 - **Tests auth:** `authLink.test.ts` + `security.test.ts` (suite ~57 tests).
 - **Desktop:** última release publicada según tag GitHub; bump de versión en `package.json` + `src-tauri/tauri.conf.json` + `Cargo.toml` antes de `Release desktop`.
+- **Avisos:** misma UI en web (popup) y Tauri; detalle en `docs/ARCHITECTURE.md` § Avisos. En navegador hay que permitir popups del dominio.

@@ -28,3 +28,4 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 - Mientras Verifying: Supabase Site URL = pages.dev (no el custom).
 - `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
 - Probar invites en incógnito.
+- Avisos web = popup (`?reminder=1`); ver `docs/ARCHITECTURE.md`. Permitir emergentes en el dominio.

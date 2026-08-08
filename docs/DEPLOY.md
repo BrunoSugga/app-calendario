@@ -63,3 +63,4 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - No poner `service_role` ni tokens en el repo.
 - Rotar tokens de Supabase/Cloudflare si se pegaron en el chat.
 - Access (Zero Trust) solo después de que invite/recovery funcionen.
+- Avisos en web: el sitio abre una ventana emergente (`?reminder=1`). Si no aparece el aviso completo, permitir popups para `calendario.bmatrix.org` / `bmx-calendario.pages.dev`. Detalle: `docs/ARCHITECTURE.md`.

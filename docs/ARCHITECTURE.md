@@ -66,13 +66,21 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 - Sanitización en `src/lib/security.ts`.
 - CSP web en producción (`applyWebCsp`); headers HTTP en Cloudflare (`public/_headers`).
 
+## Avisos / recordatorios (web + desktop)
+
+- Motor: `useReminders` (poll ~15s) → `openReminderWindow` (`src/lib/tauri.ts`).
+- UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
+- **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
+- **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups, cae a un `alert` pidiendo permitir emergentes en el sitio (`calendario.bmatrix.org` / Pages / localhost).
+- Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`.
+- Aplazamientos:
+  - **≤12 h** (stepper min/h): solo silencia (`calendario.snooze.*`).
+  - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
+
 ## Escritorio (Tauri)
 
-- Ventana principal + ventana de recordatorio (`?reminder=1`, capabilities en `src-tauri/capabilities/`).
-- Aplazamientos en el aviso:
-  - **≤12 h** (stepper min/h): solo silencia (`localStorage` `calendario.snooze.*`).
-  - **>12 h** (días) o **Reagendar**: mueve el evento vía IPC `calendario:reschedule-event` y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
-- En browser abre la misma UI de aviso en una ventana emergente (si el navegador la bloquea, pide permitir popups); en Tauri usa WebviewWindow.
+- Ventana principal + ventana de recordatorio (ver sección Avisos).
+- Capabilities en `src-tauri/capabilities/`.
 - Updater vía GitHub Releases (workflow `release.yml`).
 
 ## Deploy web
@@ -80,3 +88,4 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 - **Live:** `https://bmx-calendario.pages.dev` (Pages `bmx-calendario`).
 - **Custom:** `https://calendario.bmatrix.org` (hasta Active, Site URL de Auth = pages.dev).
 - GitHub Pages deshabilitado. Detalle: `docs/DEPLOY.md`.
+- En web, los avisos requieren **permitir ventanas emergentes** en el dominio.
