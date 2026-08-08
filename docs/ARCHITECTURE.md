@@ -74,5 +74,6 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 
 ## Deploy web
 
-- **Cloudflare Pages** (`VITE_BASE=/`): `bmx-calendario.pages.dev` / `calendario.bmatrix.org`.
-- GitHub Pages deshabilitado. Ver `docs/DEPLOY.md`.
+- **Live:** `https://bmx-calendario.pages.dev` (Pages `bmx-calendario`).
+- **Custom:** `https://calendario.bmatrix.org` (hasta Active, Site URL de Auth = pages.dev).
+- GitHub Pages deshabilitado. Detalle: `docs/DEPLOY.md`.

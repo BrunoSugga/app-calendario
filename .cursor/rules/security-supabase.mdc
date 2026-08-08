@@ -1,16 +1,19 @@
 ---
 description: Convenciones de seguridad y Supabase para BMatrix Calendario
-globs: supabase/**/*,src/lib/security.ts,src/lib/supabase.ts,src/context/AuthContext.tsx,src/components/Auth/**
+globs: supabase/**/*,src/lib/security.ts,src/lib/supabase.ts,src/lib/authLink.ts,src/lib/invite.ts,src/context/AuthContext.tsx,src/components/Auth/**
 alwaysApply: false
 ---
 
 # Seguridad / Auth
 
 - Seguí `docs/SECURITY.md`.
-- Invite/recovery: usar `src/lib/authLink.ts` (nunca aplicar el link sobre otra sesión abierta).
-- Migraciones nuevas numeradas; no editar migraciones ya aplicadas en producción sin estrategia.
-- `profiles.role` no debe ser editable por el propio usuario vía RLS.
-- Signup público cloud deshabilitado; altas = invite admin (cualquier email válido).
-- Validar contraseñas con `assertCloudPassword` (mín. 8 + letra y número).
-- Cliente: solo anon + PKCE; `detectSessionInUrl=false`.
-- Ante cambios de auth: `npm test` (incluye `authLink.test.ts` y `security.test.ts`).
+- Invite/recovery: `src/lib/authLink.ts` (signOut local antes de aplicar el token del mail).
+- Errores de Edge Function: parsear `FunctionsHttpError.context` (`invite.ts`); no dejar solo “non-2xx”.
+- User ya existe → recovery resent en `invite-user`, no fallar opaco.
+- Migraciones nuevas numeradas; no editar aplicadas en prod sin estrategia.
+- `profiles.role` no editable por el usuario; admin seed fijo en docs.
+- Signup cloud off; invites cualquier email válido.
+- `assertCloudPassword`: mín. 8 + letra y número.
+- Cliente: anon + PKCE; `detectSessionInUrl=false`.
+- Site URL debe ser un host que responda (pages.dev si custom está Verifying).
+- Ante cambios auth: `npm test`.

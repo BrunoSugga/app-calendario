@@ -17,7 +17,14 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 ## Inviolables
 
 - Nunca `service_role` ni secretos de admin en frontend/Tauri/`VITE_*`.
-- Invites y altas privilegiadas solo vía Edge Functions.
+- Invites y altas privilegiadas solo vía Edge Functions (`invite-user`).
 - Modo local ≠ seguridad multi-usuario.
 - Responder en español al usuario.
 - No commits salvo pedido explícito.
+
+## Recordatorios operativos (2026-08)
+
+- Web: `bmx-calendario.pages.dev`. Custom `calendario.bmatrix.org` puede estar Verifying.
+- Mientras Verifying: Supabase Site URL = pages.dev (no el custom).
+- `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
+- Probar invites en incógnito.

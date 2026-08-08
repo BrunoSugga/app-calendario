@@ -36,14 +36,17 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Preferir migraciones SQL numeradas en `supabase/migrations/`.
 - Operaciones privilegiadas (invitar usuarios, etc.) solo vía **Supabase Edge Functions** con `service_role` en el servidor.
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
+- No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado de seguridad
+## Estado actual (2026-08-08)
 
-Ver `docs/SECURITY.md`. Resumen:
+Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- Signup público deshabilitado (UI cloud + Dashboard).
-- Solo un **admin** (`bfd18782-7bea-4386-bd8f-de050f398aec`) puede invitar (cualquier email válido).
-- Invite/recovery: `src/lib/authLink.ts` limpia sesión local antes de aplicar el token del mail (no pisar admin).
-- RLS + CHECKs en migraciones `005`/`006`.
-- Deploy web: **Cloudflare Pages** (`calendario.bmatrix.org` / `bmx-calendario.pages.dev`).
-- Tests de seguridad: `authLink.test.ts` + `security.test.ts` (correr `npm test` ante cambios de auth).
+- **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
+- **Web live:** `https://bmx-calendario.pages.dev` (proyecto Cloudflare Pages `bmx-calendario`).
+- **Custom domain:** `calendario.bmatrix.org` — puede estar en *Verifying*; hasta que esté **Active**, Site URL de Supabase debe ser `https://bmx-calendario.pages.dev`.
+- **Invites:** cualquier email; si el user ya existe → Edge Function reenvía recovery.
+- **Rate limit mails Supabase (free):** error `email rate limit exceeded` → esperar ~30–60 min; no spamear invites.
+- **Borrar usuarios:** solo en Supabase → Authentication → Users (no hay UI en la app).
+- **GitHub Pages:** workflow deshabilitado.
+- **Tests auth:** `authLink.test.ts` + `security.test.ts` (suite ~57 tests).

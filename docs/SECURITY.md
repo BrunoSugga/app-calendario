@@ -27,76 +27,97 @@ sequenceDiagram
   App->>Edge: JWT admin + email
   Edge->>Edge: profiles.role = admin?
   Edge->>SB: inviteUserByEmail (service_role)
+  Note over Edge,SB: Si ya existe → resetPasswordForEmail
   SB->>Invitee: mail con link
-  Invitee->>App: abre link (#access_token o ?code)
-  App->>App: signOut local + setSession del link
+  Invitee->>App: abre link (token hash / code / token_hash)
+  App->>App: authLink: signOut local + setSession/verifyOtp
   App->>Invitee: Activá tu cuenta / set password
   Invitee->>SB: updateUser(password)
 ```
 
+### Piezas de código
+
+| Pieza | Rol |
+|-------|-----|
+| `src/lib/authLink.ts` | Consume invite/recovery; no pisa sesión admin |
+| `src/lib/invite.ts` | Llama Edge Function; parsea error real (`FunctionsHttpError`) |
+| `src/context/AuthContext.tsx` | Sesión, set-password, forgot, `authLinkError` |
+| `supabase/functions/invite-user` | Solo admin; invite o reenvío recovery |
+
 ### Reglas anti-confusión de sesión
 
-- `detectSessionInUrl: false`; el consumo es manual en `src/lib/authLink.ts`.
-- Ante tokens de invite/recovery: `signOut({ scope: 'local' })` y después `setSession` / `exchangeCodeForSession`.
-- `?set-password=1` **solo** activa el flujo si el tab marcó `sessionStorage` al consumir el link (evita que un admin con esa query se auto-cambie la clave).
-- Tras set password: limpiar marca + query + hash.
+- `detectSessionInUrl: false`; consumo manual en `authLink.ts`.
+- Ante tokens: `signOut({ scope: 'local' })` → `setSession` / `exchangeCodeForSession` / `verifyOtp`.
+- Soporta: `#access_token`, `?code=`, `?token_hash=&type=`.
+- `?set-password=1` solo con marca en `sessionStorage` (si no → mensaje de enlace incompleto, no cambia clave del admin).
+- Probar invites en **incógnito** / sin sesión admin.
 
 ### Roles
 
-- Admin seed: `bfd18782-7bea-4386-bd8f-de050f398aec` (`005_admin_invites.sql`).
-- Invites: **cualquier email válido** (Gmail, Camposur, etc.); el control es solo-admin.
-- `profiles.role` protegido por trigger (no auto-promoción).
+- Admin seed: `bfd18782-7bea-4386-bd8f-de050f398aec`.
+- Invites: **cualquier email válido** (Gmail, Camposur, etc.).
+- `profiles.role` protegido por trigger.
+- Borrar usuarios: solo Dashboard Supabase → Authentication → Users (cascade borra datos).
 
-### Links de mail (invite / recovery)
+### Contraseñas
 
-Si el link abre solo el login sin “Activá tu cuenta”:
+- Mín. 8, máx. 128, letra + número (`assertCloudPassword`).
+- UI: Activá tu cuenta / Restablecé + “Olvidé mi contraseña”.
 
-1. Supabase → **Authentication → URL Configuration** debe incluir:
-   - Site URL: `https://bmx-calendario.pages.dev` (o `https://calendario.bmatrix.org` cuando esté Active)
-   - Redirect URLs: `https://bmx-calendario.pages.dev/**`, `https://calendario.bmatrix.org/**`, `http://localhost:5173/**`
-2. Abrí el link en **incógnito** (sin sesión admin).
-3. Si el antivirus del mail “previsualiza” el link, se gasta el token: pedí otro invite o “Olvidé mi contraseña”.
-4. La app consume `access_token` (hash), `code` (PKCE) o `token_hash`+`type` (`verifyOtp`) en `src/lib/authLink.ts`.
+### Links de mail — troubleshooting
+
+| Síntoma | Causa probable | Qué hacer |
+|---------|----------------|-----------|
+| Abre login normal sin set-password | Site URL en dominio no Active / tokens gastados | Site URL = `bmx-calendario.pages.dev`; nuevo mail en incógnito |
+| `email rate limit exceeded` | Límite free de Supabase Auth emails | Esperar 30–60 min; un solo reenvío |
+| `Edge Function returned a non-2xx` | Error real oculto (ya se parsea) | Ver mensaje en UI; user ya existe → recovery |
+| Cambia clave del admin | Sesión admin + link invite (bug viejo) | Ya mitigado con `authLink`; usar incógnito |
+
+**URL Configuration recomendada (mientras custom domain Verifying):**
+
+- Site URL: `https://bmx-calendario.pages.dev`
+- Redirect URLs: `https://bmx-calendario.pages.dev/**`, `https://calendario.bmatrix.org/**`, `http://localhost:5173/**`
 
 ### Edge Function `invite-user`
 
-- Verifica JWT + `role=admin`.
-- `redirectTo` solo `https://*` o `http://localhost|127.0.0.1`.
-- Sin `service_role` en el cliente.
+- JWT + `role=admin`.
+- Invite nuevo; si “already registered” → `resetPasswordForEmail`.
+- `redirectTo`: `https://*` o `http://localhost|127.0.0.1`.
+- Redeploy: `npx supabase functions deploy invite-user --project-ref hznvsuobulrxxpofebkq`
 
 ### RLS / DB
 
-- Migraciones `001`–`006` aplicadas (RLS + hardening + CHECKs).
-- Admin **no** lee calendarios ajenos; solo gestiona altas.
+- Migraciones `001`–`006` aplicadas.
+- Admin no lee calendarios ajenos; solo gestiona altas.
 
 ---
 
-## Tests de seguridad
+## Tests
 
 ```bash
 npm test
 ```
 
-Cubren:
-
-- `src/lib/security.test.ts` — password, email invite, sanitización, ids/tokens.
-- `src/lib/authLink.test.ts` — no pisar admin con `?set-password=1`, consume invite hash, PKCE code, redirects seguros.
-- `src/components/Auth/LoginPage.test.tsx` — cloud sin registro público + forgot password.
+- `security.test.ts` — password, emails, sanitización.
+- `authLink.test.ts` — sesión, token_hash, PKCE, errores URL, set-password stale.
+- `LoginPage.test.tsx` — cloud sin signup público.
 
 ---
 
-## Checklist operativo (manual)
+## Checklist operativo
 
-- [x] Migraciones 005/006 en SQL Editor
-- [x] Edge Function desplegada
-- [x] Signup público desactivado
-- [x] Cloudflare Pages + secrets
-- [ ] Probar invite en **incógnito** / perfil sin sesión admin
-- [ ] Custom domain `calendario.bmatrix.org` Active
-- [ ] Dashboard: password min 8 + letra/número si está disponible
+- [x] Migraciones 005/006
+- [x] Edge Function deployada (invite + recovery resent)
+- [x] Signup público off
+- [x] Cloudflare Pages live
+- [ ] Site URL = host que responde hoy (`pages.dev` hasta Active)
+- [ ] Invite OK en incógnito (pendiente cooldown rate limit)
+- [ ] `calendario.bmatrix.org` Active → actualizar Site URL
+- [ ] Rotar tokens pegados en chat
 
-## Deuda menor (no bloqueante)
+## Deuda menor
 
-- CORS de la Edge Function en `*` (aceptable; se puede acotar a orígenes conocidos).
-- Cloudflare Access (opcional, después).
-- Rate limit de invites por admin/día (nice-to-have).
+- CORS Edge Function `*`.
+- Cloudflare Access (después).
+- Rate limit propio de invites (nice-to-have; hoy manda Supabase free).
+- UI admin para borrar usuarios (hoy solo Dashboard).
