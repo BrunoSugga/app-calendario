@@ -66,11 +66,18 @@ export function SetPasswordPage() {
         <p className="login-sub">
           {recovery
             ? 'Elegí una contraseña nueva para volver a entrar.'
-            : 'Te invitaron a BMatrix Calendario. Esta pantalla es solo para vos: creá tu propia contraseña para usar la app.'}
+            : 'Te invitaron a BMatrix Calendario. Esta pantalla es solo para la cuenta del link (no la del administrador). Creá tu propia contraseña.'}
         </p>
         {user?.email && (
           <p className="login-hint">
-            Tu usuario será: <strong>{user.email}</strong>
+            Vas a activar: <strong>{user.email}</strong>
+            {user.role === 'admin' ? (
+              <>
+                {' '}
+                (ojo: es la cuenta admin; abrí el link del invitado en una ventana de
+                incógnito si querías activar otro correo)
+              </>
+            ) : null}
           </p>
         )}
         <p className="login-hint">Mínimo 8 caracteres, con al menos una letra y un número.</p>

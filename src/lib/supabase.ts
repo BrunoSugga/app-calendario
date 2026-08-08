@@ -20,12 +20,16 @@ function isAllowedSupabaseUrl(value: string | undefined): value is string {
 
 export const isCloudMode = Boolean(isAllowedSupabaseUrl(url) && anonKey && anonKey.length > 20)
 
+/**
+ * detectSessionInUrl=false: el AuthContext consume invite/recovery a mano
+ * (limpia la sesión previa del admin para no pisar contraseñas).
+ */
 export const supabase: SupabaseClient | null = isCloudMode
   ? createClient(url!, anonKey!, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
         flowType: 'pkce',
       },
     })

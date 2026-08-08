@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { isCloudMode, supabase } from '../lib/supabase'
 import {
   getLocalSession,
@@ -59,14 +59,72 @@ function normalizeEmail(email: string): string {
   return next
 }
 
-function shouldForcePasswordSetup(): boolean {
-  const params = new URLSearchParams(window.location.search)
-  if (params.get('set-password') === '1') return true
-  const hash = window.location.hash.replace(/^#/, '')
-  if (!hash) return false
-  const hashParams = new URLSearchParams(hash)
+function getHashParams(): URLSearchParams {
+  return new URLSearchParams(window.location.hash.replace(/^#/, ''))
+}
+
+function isPasswordSetupType(type: string | null): boolean {
+  return type === 'invite' || type === 'recovery' || type === 'signup'
+}
+
+function stripAuthHashKeepSetupFlag(forceSetup: boolean) {
+  const url = new URL(window.location.href)
+  url.hash = ''
+  if (forceSetup) url.searchParams.set('set-password', '1')
+  else url.searchParams.delete('set-password')
+  window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+}
+
+/**
+ * Si el link trae tokens de invite/recovery, limpia la sesión local (p. ej. admin)
+ * y aplica la sesión del link. Evita cambiar la contraseña del usuario equivocado.
+ */
+async function consumeInboundAuthLink(
+  client: SupabaseClient,
+): Promise<{ needsPasswordSetup: boolean }> {
+  const hashParams = getHashParams()
+  const accessToken = hashParams.get('access_token')
+  const refreshToken = hashParams.get('refresh_token')
   const type = hashParams.get('type')
-  return type === 'recovery' || type === 'invite'
+  const query = new URLSearchParams(window.location.search)
+  const code = query.get('code')
+  const flaggedSetup = query.get('set-password') === '1'
+  const inbound =
+    Boolean(accessToken && refreshToken) ||
+    Boolean(code) ||
+    isPasswordSetupType(type)
+
+  if (!inbound) {
+    return { needsPasswordSetup: flaggedSetup }
+  }
+
+  // Crítico: no reutilizar la sesión del admin abierta en este navegador
+  await client.auth.signOut({ scope: 'local' })
+
+  if (accessToken && refreshToken) {
+    const { error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+    if (error) throw error
+    const needsPasswordSetup = flaggedSetup || isPasswordSetupType(type)
+    stripAuthHashKeepSetupFlag(needsPasswordSetup)
+    return { needsPasswordSetup }
+  }
+
+  if (code) {
+    const { error } = await client.auth.exchangeCodeForSession(code)
+    if (error) throw error
+    const needsPasswordSetup = flaggedSetup || isPasswordSetupType(type)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('code')
+    if (needsPasswordSetup) url.searchParams.set('set-password', '1')
+    url.hash = ''
+    window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+    return { needsPasswordSetup }
+  }
+
+  return { needsPasswordSetup: flaggedSetup || isPasswordSetupType(type) }
 }
 
 async function mapCloudUser(user: User): Promise<AuthUser> {
@@ -99,9 +157,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function init() {
       if (isCloudMode && supabase) {
-        if (shouldForcePasswordSetup()) {
-          setNeedsPasswordSetup(true)
+        let setup = false
+        try {
+          const inbound = await consumeInboundAuthLink(supabase)
+          setup = inbound.needsPasswordSetup
+        } catch {
+          setup = new URLSearchParams(window.location.search).get('set-password') === '1'
         }
+        if (!mounted) return
+        setNeedsPasswordSetup(setup)
 
         const { data } = await supabase.auth.getSession()
         if (!mounted) return
@@ -211,12 +275,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('No hay sesión de nube')
     }
     assertCloudPassword(password)
-    const { error } = await supabase.auth.updateUser({ password })
+    const {
+      data: { user: current },
+    } = await supabase.auth.getUser()
+    if (!current) {
+      throw new Error('Abrí el link del correo de invitación en una ventana sin otra sesión')
+    }
+    const { data, error } = await supabase.auth.updateUser({ password })
     if (error) throw error
     setNeedsPasswordSetup(false)
+    if (data.user) setUser(await mapCloudUser(data.user))
     const url = new URL(window.location.href)
     url.searchParams.delete('set-password')
-    window.history.replaceState({}, '', url.pathname + url.search + url.hash)
+    url.hash = ''
+    window.history.replaceState({}, '', `${url.pathname}${url.search}`)
   }, [])
 
   const clearPasswordSetup = useCallback(() => {
