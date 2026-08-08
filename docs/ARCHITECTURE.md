@@ -68,8 +68,11 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 
 ## Escritorio (Tauri)
 
-- Ventana principal + ventana de recordatorio.
-- Capabilities en `src-tauri/capabilities/`.
+- Ventana principal + ventana de recordatorio (`?reminder=1`, capabilities en `src-tauri/capabilities/`).
+- Aplazamientos en el aviso:
+  - **≤12 h** (stepper min/h): solo silencia (`localStorage` `calendario.snooze.*`).
+  - **>12 h** (días) o **Reagendar**: mueve el evento vía IPC `calendario:reschedule-event` y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
+- En browser el recordatorio cae a `alert()`; la UI de steppers es Tauri.
 - Updater vía GitHub Releases (workflow `release.yml`).
 
 ## Deploy web

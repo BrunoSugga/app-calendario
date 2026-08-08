@@ -50,3 +50,4 @@ Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 - **Borrar usuarios:** solo en Supabase → Authentication → Users (no hay UI en la app).
 - **GitHub Pages:** workflow deshabilitado.
 - **Tests auth:** `authLink.test.ts` + `security.test.ts` (suite ~57 tests).
+- **Desktop:** última release publicada según tag GitHub; bump de versión en `package.json` + `src-tauri/tauri.conf.json` + `Cargo.toml` antes de `Release desktop`.
