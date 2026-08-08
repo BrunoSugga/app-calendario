@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
 import { clearFiredForEvent, clearReminderStateForEvent } from '../../domain/reschedule'
@@ -86,7 +86,7 @@ function SnoozeStepper({
 
   useEffect(() => {
     if (!menuOpen) return
-    function onDocPointer(ev: MouseEvent) {
+    function onDocPointer(ev: globalThis.MouseEvent) {
       if (!rootRef.current?.contains(ev.target as Node)) setMenuOpen(false)
     }
     function onKey(ev: KeyboardEvent) {
@@ -116,7 +116,7 @@ function SnoozeStepper({
     }, 280)
   }
 
-  function handleValueDoubleClick(ev: MouseEvent) {
+  function handleValueDoubleClick(ev: ReactMouseEvent) {
     ev.preventDefault()
     if (disabled) return
     if (clickTimerRef.current) {
