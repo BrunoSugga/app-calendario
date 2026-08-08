@@ -40,6 +40,7 @@ Si Site URL apunta a un dominio que aún no responde, los mails de invite/recove
 | Build | `npm run build` |
 | Output | `dist` |
 | `VITE_BASE` | `/` |
+| Node (CI/Actions) | **24** (`actions/checkout@v5`, `actions/setup-node@v5`, `cloudflare/wrangler-action@v4`) |
 | Secrets | `VITE_SUPABASE_*`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 
 Archivos: `public/_redirects` (SPA), `public/_headers` (security headers), `wrangler.toml`.
