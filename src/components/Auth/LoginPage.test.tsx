@@ -63,13 +63,13 @@ describe('LoginPage', () => {
     render(<LoginPage />)
 
     expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument()
-    expect(screen.getByText(/bmatrix\.org/i)).toBeInTheDocument()
+    expect(screen.getByText(/invitaron/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Crear una cuenta/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Olvidé mi contraseña/i }))
-    await user.type(screen.getByLabelText(/Correo/i), 'bruno@bmatrix.org')
+    await user.type(screen.getByLabelText(/Correo/i), 'bruno@gmail.com')
     await user.click(screen.getByRole('button', { name: /Enviar enlace/i }))
 
-    expect(authMock.requestPasswordReset).toHaveBeenCalledWith('bruno@bmatrix.org')
+    expect(authMock.requestPasswordReset).toHaveBeenCalledWith('bruno@gmail.com')
   })
 })

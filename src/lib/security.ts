@@ -21,8 +21,6 @@ export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email) && email.length <= 254
 }
 
-export const ALLOWED_INVITE_DOMAIN = 'bmatrix.org'
-
 export function assertCloudPassword(password: string): void {
   if (password.length < 8) {
     throw new Error('La contraseña debe tener al menos 8 caracteres')
@@ -38,13 +36,11 @@ export function assertCloudPassword(password: string): void {
   }
 }
 
+/** Normaliza y valida email de invitación (cualquier dominio; solo admin puede invitar). */
 export function assertInviteEmail(email: string): string {
   const next = email.trim().toLowerCase()
   if (!isValidEmail(next)) {
     throw new Error('Correo inválido')
-  }
-  if (!next.endsWith(`@${ALLOWED_INVITE_DOMAIN}`)) {
-    throw new Error(`Solo se pueden invitar correos @${ALLOWED_INVITE_DOMAIN}`)
   }
   return next
 }

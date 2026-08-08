@@ -137,7 +137,7 @@ Checklist:
 | Tema | Decisión |
 |------|----------|
 | Admin seed | UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (`005_admin_invites.sql`) |
-| Dominio de invites | Solo correos `@bmatrix.org` (dominio en Cloudflare) |
+| Dominio de invites | Cualquier email válido (el control es solo-admin) |
 | Contraseña | Mín. 8 + al menos una letra y un número; flujo **Olvidé mi contraseña** obligatorio |
 | GitHub Pages | Apagado (`deploy-pages.yml` disabled); Cloudflare Pages activo |
 | Cloudflare Access | **Después** del primer deploy útil (ver `docs/DEPLOY.md`) |
@@ -171,9 +171,9 @@ Si todavía no tenés usuario creado en ese proyecto: registrate una vez (mientr
 - UI: enlace **Olvidé mi contraseña** → `supabase.auth.resetPasswordForEmail` → redirect a `SetPasswordPage`.
 - Misma pantalla sirve para invite (primer acceso) y para recovery.
 
-### Restricción `@bmatrix.org`
+### Restricción de dominio (actualizado)
 
-En la Edge Function `invite-user` (y opcionalmente en UI admin): rechazar cualquier email cuyo dominio normalizado no sea `bmatrix.org`.
+No se limita el dominio del correo. Solo el **admin** puede invitar; Gmail, Camposur u otros correos válidos están permitidos.
 
 ---
 

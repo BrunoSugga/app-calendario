@@ -48,7 +48,7 @@ export function LoginPage() {
           {mode === 'forgot'
             ? 'Te enviamos un enlace para restablecer la contraseña'
             : isCloud
-              ? 'Iniciá sesión con tu cuenta @bmatrix.org'
+              ? 'Iniciá sesión con la cuenta que te invitaron'
               : 'Modo local (sin Supabase). Los datos quedan en este navegador.'}
         </p>
 
@@ -71,7 +71,7 @@ export function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder={isCloud ? 'nombre@bmatrix.org' : 'bruno@ejemplo.com'}
+            placeholder={isCloud ? 'tu@correo.com' : 'bruno@ejemplo.com'}
             autoComplete="email"
           />
         </label>

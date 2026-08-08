@@ -19,7 +19,8 @@ describe('security helpers', () => {
     expect(() => assertCloudPassword('abcdefgh')).toThrow(/letra y un número/)
     expect(() => assertCloudPassword('abcd1234')).not.toThrow()
     expect(() => assertInviteEmail('user@bmatrix.org')).not.toThrow()
-    expect(() => assertInviteEmail('user@gmail.com')).toThrow(/bmatrix\.org/)
+    expect(() => assertInviteEmail('user@gmail.com')).not.toThrow()
+    expect(() => assertInviteEmail('mal')).toThrow(/Correo inválido/)
   })
 
   it('sanitiza drafts de evento', () => {

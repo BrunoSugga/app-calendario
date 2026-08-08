@@ -42,7 +42,7 @@ Actualizá los docs afectados en la misma PR/cambio:
 Ver plan detallado en `docs/SECURITY.md`. Resumen:
 
 - Signup público deshabilitado (UI cloud + Dashboard).
-- Solo un **admin** (`bfd18782-7bea-4386-bd8f-de050f398aec`) puede invitar usuarios `@bmatrix.org`.
+- Solo un **admin** (`bfd18782-7bea-4386-bd8f-de050f398aec`) puede invitar usuarios (cualquier email válido).
 - El invitado define contraseña en el primer acceso (invite / recovery).
 - RLS estricto + CHECKs en migraciones `005`/`006`.
 - Deploy web: **Cloudflare Pages** (`calendario.bmatrix.org`); GitHub Pages apagado.

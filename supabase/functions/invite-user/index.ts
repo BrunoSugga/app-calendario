@@ -1,9 +1,8 @@
-// Edge Function: solo admin puede invitar usuarios @bmatrix.org
+// Edge Function: solo admin puede invitar usuarios (cualquier email válido)
 // Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (inyectados por Supabase)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.111.0'
 
-const ALLOWED_DOMAIN = 'bmatrix.org'
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -54,9 +53,6 @@ Deno.serve(async (req) => {
   const email = normalizeEmail(payload.email)
   if (!email) {
     return json(400, { error: 'Correo inválido' })
-  }
-  if (!email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-    return json(400, { error: `Solo se permiten correos @${ALLOWED_DOMAIN}` })
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {

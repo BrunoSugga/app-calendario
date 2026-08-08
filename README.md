@@ -60,7 +60,7 @@ En Supabase → **Authentication → URL Configuration**:
 1. **Site URL:** `https://calendario.bmatrix.org`
 2. **Redirect URLs:** `https://calendario.bmatrix.org/**` y `http://localhost:5173/**`
 
-Altas de usuario: solo el **admin** invita correos `@bmatrix.org` (sidebar → Invitar usuario).
+Altas de usuario: solo el **admin** invita (cualquier correo; sidebar → Invitar usuario).
 
 ## Desarrollo
 

@@ -26,7 +26,7 @@ Para el calendario reutilizamos la **misma cuenta + dominio**:
 
 - Subdominio propuesto: **`calendario.bmatrix.org`** → proyecto Cloudflare Pages.
 - DNS: registro CNAME en Cloudflare (Pages lo guía al conectar el dominio custom).
-- Invites Auth solo a emails `@bmatrix.org`.
+- Invites Auth: solo admin; cualquier email válido (Gmail, Camposur, etc.).
 
 Account ID / API token: se toman del dashboard Cloudflare al cablear el workflow (no están en el repo de informes; no los copies a git).
 

@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { inviteTeamUser } from '../../lib/invite'
-import { ALLOWED_INVITE_DOMAIN } from '../../lib/security'
 
 type Props = {
   open: boolean
@@ -40,7 +39,7 @@ export function InviteUserModal({ open, onClose }: Props) {
       >
         <h2>Invitar usuario</h2>
         <p className="login-sub">
-          Solo correos @{ALLOWED_INVITE_DOMAIN}. La persona recibirá un mail para crear su
+          Podés invitar Gmail, Camposur u otro correo. La persona recibirá un mail para crear su
           contraseña.
         </p>
         <label>
@@ -50,7 +49,7 @@ export function InviteUserModal({ open, onClose }: Props) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder={`nombre@${ALLOWED_INVITE_DOMAIN}`}
+            placeholder="compañero@gmail.com"
             autoComplete="email"
           />
         </label>
