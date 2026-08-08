@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { addMinutes, format, formatISO } from 'date-fns'
+import { format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
+import {
+  reminderFireKey,
+  reminderScanRange,
+  selectDueReminders,
+} from '../domain/reminders'
 import {
   consumeQueuedOpenEvent,
   consumeQueuedRescheduleEvent,
@@ -139,21 +144,18 @@ export function useReminders(options: Options = {}): void {
     const tick = async () => {
       firedRef.current = loadFired()
       const now = new Date()
-      const horizon = addMinutes(now, 24 * 60)
-      const occurrences = expandOccurrences(events, calendars, exceptions, now, horizon)
+      const range = reminderScanRange(now)
+      const occurrences = expandOccurrences(
+        events,
+        calendars,
+        exceptions,
+        range.start,
+        range.end,
+      )
+      const due = selectDueReminders(occurrences, now, firedRef.current, { snoozeActive })
 
-      for (const occ of occurrences) {
-        if (snoozeActive(occ.eventId)) continue
-
-        const remindAt = addMinutes(occ.startsAt, -occ.reminderMinutes)
-        if (remindAt > now) continue
-        if (occ.startsAt < addMinutes(now, -5)) continue
-
-        const key = `${occ.eventId}:${occ.originalStartsAt.toISOString()}`
-        if (firedRef.current.has(key)) continue
-
-        firedRef.current.add(key)
-        saveFired(firedRef.current)
+      for (const occ of due) {
+        const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
 
         const calendar = calendars.find((c) => c.id === occ.calendarId)
         const timeLabel =
@@ -161,7 +163,7 @@ export function useReminders(options: Options = {}): void {
             ? format(occ.startsAt, 'HH:mm')
             : `${format(occ.startsAt, 'HH:mm')} - ${format(occ.endsAt, 'HH:mm')}`
 
-        await openReminderWindow({
+        const opened = await openReminderWindow({
           title: occ.title,
           timeLabel,
           calendarName: calendar?.name ?? 'Calendario',
@@ -171,6 +173,11 @@ export function useReminders(options: Options = {}): void {
           startsAt: formatISO(occ.startsAt),
           originalStartsAt: formatISO(occ.originalStartsAt),
         })
+
+        // Solo marcar disparado si se mostró aviso (popup/alert/webview).
+        if (!opened) continue
+        firedRef.current.add(key)
+        saveFired(firedRef.current)
       }
     }
 

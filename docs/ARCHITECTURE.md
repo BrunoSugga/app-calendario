@@ -69,13 +69,17 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 ## Avisos / recordatorios (web + desktop)
 
 - Motor: `useReminders` (poll ~15s) → `openReminderWindow` (`src/lib/tauri.ts`).
+- Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `selectDueReminders`) + tests en `reminders.test.ts`.
+- Escaneo: mira **gracia atrás** (5 min) + horizonte 24 h. Sin el lookback, un `kind=reminder` (`ends_at === starts_at`) desaparecía del expand apenas pasaba el segundo de inicio.
+- `fired` en `localStorage` solo se marca **después** de abrir el aviso (si falla el webview/popup no se consume el disparo).
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
-- **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups, cae a un `alert` pidiendo permitir emergentes en el sitio (`calendario.bmatrix.org` / Pages / localhost).
+- **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`.
 - Aplazamientos:
   - **≤12 h** (stepper min/h): solo silencia (`calendario.snooze.*`).
   - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
+- Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
 
 ## Escritorio (Tauri)
 

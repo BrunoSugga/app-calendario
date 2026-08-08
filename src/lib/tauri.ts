@@ -246,14 +246,14 @@ export async function openReminderWindow(payload: {
   kind: EventKind
   startsAt: string
   originalStartsAt: string
-}): Promise<void> {
+}): Promise<boolean> {
   if (
     !isSafeId(payload.eventId) ||
     !isSafeIsoDate(payload.startsAt) ||
     !isSafeIsoDate(payload.originalStartsAt)
   ) {
     console.error('Recordatorio omitido: identificadores inválidos')
-    return
+    return false
   }
 
   const token = storeReminderPayload(payload)
@@ -268,14 +268,35 @@ export async function openReminderWindow(payload: {
       `calendario-reminder-${payload.eventId.slice(0, 24)}`,
       'popup=yes,width=440,height=460,resizable=no,scrollbars=yes',
     )
-    if (!popup) {
-      window.alert(
-        `${payload.title}\n${payload.timeLabel}\n${payload.calendarName}\n\nPermití ventanas emergentes para ver el aviso completo.`,
-      )
-      return
+    if (popup) {
+      popup.focus()
+      return true
     }
-    popup.focus()
-    return
+
+    // Popup bloqueado: Notification API o alert de respaldo
+    try {
+      if (typeof Notification !== 'undefined') {
+        if (Notification.permission === 'granted') {
+          new Notification(payload.title || 'Recordatorio', {
+            body: `${payload.timeLabel}\n${payload.calendarName}`,
+          })
+          window.alert(
+            `${payload.title}\n${payload.timeLabel}\n${payload.calendarName}\n\nPermití ventanas emergentes para la UI completa del aviso.`,
+          )
+          return true
+        }
+        if (Notification.permission !== 'denied') {
+          void Notification.requestPermission()
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    window.alert(
+      `${payload.title}\n${payload.timeLabel}\n${payload.calendarName}\n\nPermití ventanas emergentes para ver el aviso completo.`,
+    )
+    return true
   }
 
   const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
@@ -294,7 +315,19 @@ export async function openReminderWindow(payload: {
     decorations: true,
   })
 
-  win.once('tauri://error', (event) => {
-    console.error('No se pudo abrir recordatorio', event)
+  return await new Promise<boolean>((resolve) => {
+    let settled = false
+    const done = (ok: boolean) => {
+      if (settled) return
+      settled = true
+      resolve(ok)
+    }
+    win.once('tauri://created', () => done(true))
+    win.once('tauri://error', (event) => {
+      console.error('No se pudo abrir recordatorio', event)
+      done(false)
+    })
+    // Si no hay evento a tiempo, asumir OK (comportamiento previo) para no re-disparar en bucle
+    window.setTimeout(() => done(true), 1500)
   })
 }
