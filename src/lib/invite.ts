@@ -1,8 +1,29 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { isCloudMode, supabase } from './supabase'
 import { assertInviteEmail } from './security'
 import { isSafeAuthRedirect } from './authLink'
 
-export async function inviteTeamUser(email: string): Promise<void> {
+async function messageFromFunctionsError(error: unknown, data: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json()
+      if (body && typeof body === 'object' && 'error' in body && body.error) {
+        return String(body.error)
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  if (data && typeof data === 'object' && 'error' in data && (data as { error: unknown }).error) {
+    return String((data as { error: unknown }).error)
+  }
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return 'No se pudo enviar la invitación'
+}
+
+export async function inviteTeamUser(email: string): Promise<{ resent?: boolean }> {
   if (!isCloudMode || !supabase) {
     throw new Error('Las invitaciones solo están disponibles en modo nube')
   }
@@ -24,13 +45,13 @@ export async function inviteTeamUser(email: string): Promise<void> {
   })
 
   if (error) {
-    const nested =
-      data && typeof data === 'object' && 'error' in data
-        ? String((data as { error: unknown }).error)
-        : ''
-    throw new Error(nested || error.message || 'No se pudo enviar la invitación')
+    throw new Error(await messageFromFunctionsError(error, data))
   }
   if (data && typeof data === 'object' && 'error' in data && data.error) {
     throw new Error(String(data.error))
   }
+
+  const mode =
+    data && typeof data === 'object' && 'mode' in data ? String((data as { mode: unknown }).mode) : ''
+  return { resent: mode === 'recovery_resent' }
 }

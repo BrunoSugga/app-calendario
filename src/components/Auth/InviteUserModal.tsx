@@ -20,8 +20,12 @@ export function InviteUserModal({ open, onClose }: Props) {
     setError(null)
     setInfo(null)
     try {
-      await inviteTeamUser(email)
-      setInfo(`Invitación enviada a ${email.trim().toLowerCase()}`)
+      const result = await inviteTeamUser(email)
+      setInfo(
+        result.resent
+          ? `Esa cuenta ya existía: reenviamos un enlace a ${email.trim().toLowerCase()} para crear/restablecer la contraseña.`
+          : `Invitación enviada a ${email.trim().toLowerCase()}`,
+      )
       setEmail('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo invitar')
