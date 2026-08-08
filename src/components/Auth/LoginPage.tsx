@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
 export function LoginPage() {
-  const { signIn, signUpLocal, requestPasswordReset, isCloud } = useAuth()
+  const { signIn, signUpLocal, requestPasswordReset, isCloud, authLinkError, clearAuthLinkError } =
+    useAuth()
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +17,7 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     setInfo(null)
+    clearAuthLinkError()
     try {
       if (mode === 'forgot') {
         await requestPasswordReset(email.trim())
@@ -91,6 +93,7 @@ export function LoginPage() {
           </label>
         )}
 
+        {authLinkError && <p className="form-error">{authLinkError}</p>}
         {error && <p className="form-error">{error}</p>}
         {info && <p className="form-info">{info}</p>}
 

@@ -13,6 +13,7 @@ function mockClient(overrides?: {
   signOut?: ReturnType<typeof vi.fn>
   setSession?: ReturnType<typeof vi.fn>
   exchangeCodeForSession?: ReturnType<typeof vi.fn>
+  verifyOtp?: ReturnType<typeof vi.fn>
 }) {
   return {
     auth: {
@@ -20,6 +21,7 @@ function mockClient(overrides?: {
       setSession: overrides?.setSession ?? vi.fn().mockResolvedValue({ error: null }),
       exchangeCodeForSession:
         overrides?.exchangeCodeForSession ?? vi.fn().mockResolvedValue({ error: null }),
+      verifyOtp: overrides?.verifyOtp ?? vi.fn().mockResolvedValue({ error: null }),
     },
   }
 }
@@ -38,13 +40,14 @@ describe('authLink security', () => {
     expect(isSafeAuthRedirect('javascript:alert(1)')).toBe(false)
   })
 
-  it('ignora ?set-password=1 sin marca de invite (no pisa sesión admin)', async () => {
+  it('ignora ?set-password=1 sin marca y avisa enlace incompleto', async () => {
     const client = mockClient()
     const result = await consumeInboundAuthLink(client as never, {
       hash: '',
       search: '?set-password=1',
     })
     expect(result.needsPasswordSetup).toBe(false)
+    expect(result.linkError).toMatch(/no trajo una sesión válida/i)
     expect(client.auth.signOut).not.toHaveBeenCalled()
     expect(client.auth.setSession).not.toHaveBeenCalled()
   })
@@ -57,6 +60,7 @@ describe('authLink security', () => {
       search: '?set-password=1',
     })
     expect(result.needsPasswordSetup).toBe(true)
+    expect(result.linkError).toBeNull()
     expect(client.auth.signOut).not.toHaveBeenCalled()
   })
 
@@ -77,6 +81,21 @@ describe('authLink security', () => {
     expect(sessionStorage.getItem(PASSWORD_SETUP_FLAG)).toBe('1')
   })
 
+  it('consume token_hash de invite vía verifyOtp', async () => {
+    const client = mockClient()
+    const result = await consumeInboundAuthLink(client as never, {
+      hash: '',
+      search: '?token_hash=xyz&type=invite&set-password=1',
+    })
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
+    expect(client.auth.verifyOtp).toHaveBeenCalledWith({
+      token_hash: 'xyz',
+      type: 'invite',
+    })
+    expect(result.needsPasswordSetup).toBe(true)
+    expect(getPasswordSetupMode()).toBe('invite')
+  })
+
   it('aplica recovery vía PKCE code', async () => {
     const client = mockClient()
     const result = await consumeInboundAuthLink(client as never, {
@@ -87,6 +106,16 @@ describe('authLink security', () => {
     expect(client.auth.exchangeCodeForSession).toHaveBeenCalledWith('abc')
     expect(result.needsPasswordSetup).toBe(true)
     expect(getPasswordSetupMode()).toBe('recovery')
+  })
+
+  it('expone errores de Supabase en la URL', async () => {
+    const client = mockClient()
+    const result = await consumeInboundAuthLink(client as never, {
+      hash: '',
+      search: '?error=access_denied&error_description=Email+link+is+invalid+or+has+expired',
+    })
+    expect(result.needsPasswordSetup).toBe(false)
+    expect(result.linkError).toMatch(/invalid or has expired/i)
   })
 
   it('propaga error de setSession y no marca setup', async () => {

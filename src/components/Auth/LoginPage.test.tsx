@@ -10,11 +10,13 @@ const authMock = {
   requestPasswordReset: vi.fn(),
   completePasswordSetup: vi.fn(),
   clearPasswordSetup: vi.fn(),
+  clearAuthLinkError: vi.fn(),
   user: null,
   loading: false,
   isCloud: false,
   isAdmin: false,
   needsPasswordSetup: false,
+  authLinkError: null as string | null,
 }
 
 vi.mock('../../context/AuthContext', () => ({

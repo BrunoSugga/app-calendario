@@ -38,6 +38,7 @@ type AuthContextValue = {
   isCloud: boolean
   isAdmin: boolean
   needsPasswordSetup: boolean
+  authLinkError: string | null
   signIn: (email: string, password: string) => Promise<void>
   /** Solo modo local. En cloud las altas son por invitación de admin. */
   signUpLocal: (email: string, displayName: string) => Promise<void>
@@ -45,6 +46,7 @@ type AuthContextValue = {
   requestPasswordReset: (email: string) => Promise<void>
   completePasswordSetup: (password: string) => Promise<void>
   clearPasswordSetup: () => void
+  clearAuthLinkError: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false)
+  const [authLinkError, setAuthLinkError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -102,8 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const inbound = await consumeInboundAuthLink(supabase)
           setup = inbound.needsPasswordSetup
-        } catch {
+          if (inbound.linkError) setAuthLinkError(inbound.linkError)
+        } catch (err) {
           setup = false
+          setAuthLinkError(
+            err instanceof Error
+              ? `No se pudo abrir el enlace: ${err.message}`
+              : 'No se pudo abrir el enlace de invitación',
+          )
         }
         if (!mounted) return
         setNeedsPasswordSetup(setup)
@@ -243,6 +252,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearPasswordSetupMark()
   }, [])
 
+  const clearAuthLinkError = useCallback(() => {
+    setAuthLinkError(null)
+  }, [])
+
   const value = useMemo(
     () => ({
       user,
@@ -250,23 +263,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isCloud: isCloudMode,
       isAdmin: user?.role === 'admin',
       needsPasswordSetup,
+      authLinkError,
       signIn,
       signUpLocal,
       signOut,
       requestPasswordReset,
       completePasswordSetup,
       clearPasswordSetup,
+      clearAuthLinkError,
     }),
     [
       user,
       loading,
       needsPasswordSetup,
+      authLinkError,
       signIn,
       signUpLocal,
       signOut,
       requestPasswordReset,
       completePasswordSetup,
       clearPasswordSetup,
+      clearAuthLinkError,
     ],
   )
 

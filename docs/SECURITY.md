@@ -47,11 +47,16 @@ sequenceDiagram
 - Invites: **cualquier email válido** (Gmail, Camposur, etc.); el control es solo-admin.
 - `profiles.role` protegido por trigger (no auto-promoción).
 
-### Contraseñas
+### Links de mail (invite / recovery)
 
-- Mín. 8, máx. 128, letra + número, sin espacios extremos (`assertCloudPassword`).
-- UI: set-password + “Olvidé mi contraseña”.
-- Alinear también en Supabase Dashboard (mínimo de contraseña).
+Si el link abre solo el login sin “Activá tu cuenta”:
+
+1. Supabase → **Authentication → URL Configuration** debe incluir:
+   - Site URL: `https://bmx-calendario.pages.dev` (o `https://calendario.bmatrix.org` cuando esté Active)
+   - Redirect URLs: `https://bmx-calendario.pages.dev/**`, `https://calendario.bmatrix.org/**`, `http://localhost:5173/**`
+2. Abrí el link en **incógnito** (sin sesión admin).
+3. Si el antivirus del mail “previsualiza” el link, se gasta el token: pedí otro invite o “Olvidé mi contraseña”.
+4. La app consume `access_token` (hash), `code` (PKCE) o `token_hash`+`type` (`verifyOtp`) en `src/lib/authLink.ts`.
 
 ### Edge Function `invite-user`
 
