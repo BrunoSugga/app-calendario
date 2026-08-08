@@ -966,11 +966,12 @@ textarea:focus {
 }
 
 .snooze-stepper {
+  position: relative;
   display: inline-flex;
   align-items: stretch;
   border: 1px solid var(--border-soft);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -987,6 +988,11 @@ textarea:focus {
   font-size: 0.7rem;
   line-height: 1;
   color: var(--muted);
+  border-radius: 8px 0 0 8px;
+}
+
+.snooze-stepper-arrow:last-of-type {
+  border-radius: 0 8px 8px 0;
 }
 
 .snooze-stepper-value {
@@ -995,6 +1001,41 @@ textarea:focus {
   font-weight: 600;
   border-left: 1px solid var(--border-soft) !important;
   border-right: 1px solid var(--border-soft) !important;
+}
+
+.snooze-stepper-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 20;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  max-height: 11rem;
+  overflow-y: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: #1a2030;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.snooze-stepper-option {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text, #e8eef8);
+  text-align: left;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.snooze-stepper-option:hover,
+.snooze-stepper-option.active {
+  background: rgba(58, 138, 223, 0.25);
+  color: var(--celeste-soft, #9ec9f5);
 }
 
 .reschedule-panel {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
 import { clearFiredForEvent, clearReminderStateForEvent } from '../../domain/reschedule'
@@ -74,15 +74,66 @@ function SnoozeStepper({
   options: readonly DelayOption[]
   index: number
   onIndexChange: (next: number) => void
-  onApply: () => void
+  onApply: (atIndex?: number) => void
   disabled?: boolean
 }) {
   const current = options[index] ?? options[0]
   const atMin = index <= 0
   const atMax = index >= options.length - 1
+  const [menuOpen, setMenuOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const clickTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function onDocPointer(ev: MouseEvent) {
+      if (!rootRef.current?.contains(ev.target as Node)) setMenuOpen(false)
+    }
+    function onKey(ev: KeyboardEvent) {
+      if (ev.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDocPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current)
+    }
+  }, [])
+
+  function handleValueClick() {
+    if (disabled) return
+    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current)
+    // Esperar por si viene un doble clic (lista)
+    clickTimerRef.current = window.setTimeout(() => {
+      clickTimerRef.current = null
+      onApply()
+    }, 280)
+  }
+
+  function handleValueDoubleClick(ev: MouseEvent) {
+    ev.preventDefault()
+    if (disabled) return
+    if (clickTimerRef.current) {
+      window.clearTimeout(clickTimerRef.current)
+      clickTimerRef.current = null
+    }
+    setMenuOpen((open) => !open)
+  }
+
+  function pickOption(nextIndex: number) {
+    onIndexChange(nextIndex)
+    setMenuOpen(false)
+    onApply(nextIndex)
+  }
 
   return (
-    <div className="snooze-stepper">
+    <div className={menuOpen ? 'snooze-stepper menu-open' : 'snooze-stepper'} ref={rootRef}>
       <button
         type="button"
         className="btn snooze-stepper-arrow"
@@ -96,8 +147,11 @@ function SnoozeStepper({
         type="button"
         className="btn snooze-stepper-value"
         disabled={disabled}
-        onClick={onApply}
-        title={`Aplazar ${current.label}`}
+        onClick={handleValueClick}
+        onDoubleClick={handleValueDoubleClick}
+        aria-haspopup="listbox"
+        aria-expanded={menuOpen}
+        title={`Aplazar ${current.label} (doble clic: ver lista)`}
       >
         {current.label}
       </button>
@@ -110,6 +164,22 @@ function SnoozeStepper({
       >
         ▴
       </button>
+      {menuOpen && (
+        <ul className="snooze-stepper-menu" role="listbox" aria-label="Opciones de aplazamiento">
+          {options.map((opt, i) => (
+            <li key={opt.minutes} role="option" aria-selected={i === index}>
+              <button
+                type="button"
+                className={i === index ? 'snooze-stepper-option active' : 'snooze-stepper-option'}
+                disabled={disabled}
+                onClick={() => pickOption(i)}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -171,14 +241,14 @@ export function ReminderWindow() {
     }, 600)
   }
 
-  async function applyShort() {
-    const opt = SHORT_OPTIONS[shortIndex] ?? SHORT_OPTIONS[0]
+  async function applyShort(atIndex = shortIndex) {
+    const opt = SHORT_OPTIONS[atIndex] ?? SHORT_OPTIONS[0]
     await snooze(opt.minutes)
   }
 
-  async function applyLong() {
+  async function applyLong(atIndex = longIndex) {
     if (!data) return
-    const opt = LONG_OPTIONS[longIndex] ?? LONG_OPTIONS[0]
+    const opt = LONG_OPTIONS[atIndex] ?? LONG_OPTIONS[0]
     const base = new Date(data.startsAt)
     const next = addMinutes(base, opt.minutes)
     await rescheduleTo(next, opt.label)
@@ -248,14 +318,14 @@ export function ReminderWindow() {
             options={SHORT_OPTIONS}
             index={shortIndex}
             onIndexChange={setShortIndex}
-            onApply={() => void applyShort()}
+            onApply={(i) => void applyShort(i ?? shortIndex)}
             disabled={busy}
           />
           <SnoozeStepper
             options={LONG_OPTIONS}
             index={longIndex}
             onIndexChange={setLongIndex}
-            onApply={() => void applyLong()}
+            onApply={(i) => void applyLong(i ?? longIndex)}
             disabled={busy}
           />
         </div>
