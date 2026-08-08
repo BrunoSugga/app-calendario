@@ -10,6 +10,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { isCloudMode, supabase } from '../lib/supabase'
 import {
+  authPasswordSetupRedirect,
   clearPasswordSetupMark,
   consumeInboundAuthLink,
   isSafeAuthRedirect,
@@ -84,10 +85,6 @@ async function mapCloudUser(user: User): Promise<AuthUser> {
     displayName,
     role,
   }
-}
-
-function appOriginBase(): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/?$/, '/')
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -215,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('El restablecimiento de contraseña solo aplica en modo nube')
     }
     const normalized = normalizeEmail(email)
-    const redirectTo = `${appOriginBase()}?set-password=1`
+    const redirectTo = authPasswordSetupRedirect()
     if (!isSafeAuthRedirect(redirectTo)) {
       throw new Error('URL de redirección inválida')
     }

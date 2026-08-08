@@ -32,6 +32,7 @@ Actualizar este archivo cuando cambie el host, `VITE_BASE`, secrets o redirects 
 | `VITE_BASE` | `/` |
 | Node (CI/Actions) | **24** (`actions/checkout@v5`, `actions/setup-node@v5`, `cloudflare/wrangler-action@v4`) |
 | Secrets | `VITE_SUPABASE_*`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| Auth redirects | Build inyecta `VITE_PUBLIC_APP_URL=https://calendario.bmatrix.org` (invite/recovery desde Tauri) |
 
 Archivos: `public/_redirects` (SPA), `public/_headers` (security headers), `wrangler.toml`.
 

@@ -68,7 +68,8 @@ sequenceDiagram
 
 | Síntoma | Causa probable | Qué hacer |
 |---------|----------------|-----------|
-| Abre login normal sin set-password | Site URL en dominio no Active / tokens gastados | Site URL = `bmx-calendario.pages.dev`; nuevo mail en incógnito |
+| Abre login normal sin set-password | Site URL en dominio no Active / tokens gastados | Site URL = `calendario.bmatrix.org` (o pages.dev); nuevo mail en incógnito |
+| `URL de redirección inválida` al invitar desde escritorio | Tauri usa `http://tauri.localhost` como origin | Ya se usa `VITE_PUBLIC_APP_URL` o `https://calendario.bmatrix.org`; actualizar app |
 | `email rate limit exceeded` | Límite free de Supabase Auth emails | Esperar 30–60 min; un solo reenvío |
 | `Edge Function returned a non-2xx` | Error real oculto (ya se parsea) | Ver mensaje en UI; user ya existe → recovery |
 | Cambia clave del admin | Sesión admin + link invite (bug viejo) | Ya mitigado con `authLink`; usar incógnito |

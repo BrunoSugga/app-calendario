@@ -84,6 +84,46 @@ export function isSafeAuthRedirect(value: string): boolean {
   }
 }
 
+/** Orígenes públicos donde el invitado puede abrir el link del mail. */
+const DEFAULT_PUBLIC_APP_ORIGIN = 'https://calendario.bmatrix.org'
+
+/**
+ * Base URL para redirects de Auth (invite / recovery).
+ * En Tauri `window.location.origin` es `http://tauri.localhost` (inválido);
+ * usamos la URL web pública configurada o el default de producción.
+ */
+export function authAppBaseUrl(): string {
+  const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim()
+  if (configured) {
+    const normalized = configured.replace(/\/?$/, '/')
+    if (isSafeAuthRedirect(normalized)) return normalized
+  }
+
+  const current = `${window.location.origin}${import.meta.env.BASE_URL || '/'}`.replace(
+    /\/?$/,
+    '/',
+  )
+  if (isSafeAuthRedirect(current)) {
+    try {
+      const host = new URL(current).hostname
+      // Orígenes del webview Tauri: no sirven en el mail del invitado
+      if (host === 'tauri.localhost' || host.endsWith('.tauri.localhost')) {
+        // fall through to public default
+      } else {
+        return current
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return `${DEFAULT_PUBLIC_APP_ORIGIN}/`
+}
+
+export function authPasswordSetupRedirect(): string {
+  return `${authAppBaseUrl()}?set-password=1`
+}
+
 function readAuthError(query: URLSearchParams, hashParams: URLSearchParams): string | null {
   const description =
     query.get('error_description') ||

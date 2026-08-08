@@ -25,6 +25,7 @@ jobs:
       - name: Build web
         env:
           VITE_BASE: /
+          VITE_PUBLIC_APP_URL: https://calendario.bmatrix.org
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build

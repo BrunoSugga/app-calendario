@@ -1,7 +1,7 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { isCloudMode, supabase } from './supabase'
 import { assertInviteEmail } from './security'
-import { isSafeAuthRedirect } from './authLink'
+import { authPasswordSetupRedirect, isSafeAuthRedirect } from './authLink'
 
 async function messageFromFunctionsError(error: unknown, data: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {
@@ -34,8 +34,7 @@ export async function inviteTeamUser(email: string): Promise<{ resent?: boolean 
     throw new Error('Tenés que iniciar sesión para invitar')
   }
 
-  const baseUrl = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/?$/, '/')
-  const redirectTo = `${baseUrl}?set-password=1`
+  const redirectTo = authPasswordSetupRedirect()
   if (!isSafeAuthRedirect(redirectTo)) {
     throw new Error('URL de redirección inválida')
   }

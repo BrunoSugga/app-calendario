@@ -40,6 +40,26 @@ describe('authLink security', () => {
     expect(isSafeAuthRedirect('javascript:alert(1)')).toBe(false)
   })
 
+  it('resuelve redirect de auth evitando origen Tauri', async () => {
+    const { authAppBaseUrl, authPasswordSetupRedirect } = await import('./authLink')
+    const original = window.location
+    // vitest/jsdom: simular webview Tauri
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...original,
+        origin: 'http://tauri.localhost',
+        hostname: 'tauri.localhost',
+        protocol: 'http:',
+        href: 'http://tauri.localhost/',
+      },
+    })
+    expect(isSafeAuthRedirect('http://tauri.localhost/?set-password=1')).toBe(false)
+    expect(authAppBaseUrl()).toBe('https://calendario.bmatrix.org/')
+    expect(authPasswordSetupRedirect()).toBe('https://calendario.bmatrix.org/?set-password=1')
+    Object.defineProperty(window, 'location', { configurable: true, value: original })
+  })
+
   it('ignora ?set-password=1 sin marca y avisa enlace incompleto', async () => {
     const client = mockClient()
     const result = await consumeInboundAuthLink(client as never, {
