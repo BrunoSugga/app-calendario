@@ -1,0 +1,14 @@
+---
+description: Convenciones de seguridad y Supabase para BMatrix Calendario
+globs: supabase/**/*,src/lib/security.ts,src/lib/supabase.ts,src/context/AuthContext.tsx,src/components/Auth/**
+alwaysApply: false
+---
+
+# Seguridad / Auth
+
+- Seguí el plan en `docs/SECURITY.md`.
+- Migraciones nuevas numeradas; no editar migraciones ya aplicadas en producción sin estrategia.
+- `profiles.role` no debe ser editable por el propio usuario vía RLS.
+- Signup público cloud deshabilitado; altas = invite admin.
+- Validar contraseñas con `assertCloudPassword` (mín. 8).
+- Cliente: solo anon + PKCE.

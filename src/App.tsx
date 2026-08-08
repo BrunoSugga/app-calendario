@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { CalendarDataProvider } from './context/CalendarDataContext'
 import { LoginPage } from './components/Auth/LoginPage'
+import { SetPasswordPage } from './components/Auth/SetPasswordPage'
 import { ReminderWindow } from './components/Reminder/ReminderWindow'
 import { CalendarPage } from './pages/CalendarPage'
 
@@ -9,7 +10,7 @@ function isReminderRoute(): boolean {
 }
 
 function AppBody() {
-  const { user, loading } = useAuth()
+  const { user, loading, needsPasswordSetup } = useAuth()
 
   if (isReminderRoute()) {
     return <ReminderWindow />
@@ -17,6 +18,10 @@ function AppBody() {
 
   if (loading) {
     return <div className="login-page">Cargando BMatrix Calendario…</div>
+  }
+
+  if (needsPasswordSetup) {
+    return <SetPasswordPage />
   }
 
   if (!user) {

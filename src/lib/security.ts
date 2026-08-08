@@ -21,6 +21,8 @@ export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email) && email.length <= 254
 }
 
+export const ALLOWED_INVITE_DOMAIN = 'bmatrix.org'
+
 export function assertCloudPassword(password: string): void {
   if (password.length < 8) {
     throw new Error('La contraseña debe tener al menos 8 caracteres')
@@ -28,6 +30,23 @@ export function assertCloudPassword(password: string): void {
   if (password.length > 128) {
     throw new Error('La contraseña es demasiado larga')
   }
+  if (password.trim().length !== password.length || !password.trim()) {
+    throw new Error('La contraseña no puede empezar o terminar con espacios')
+  }
+  if (!/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(password) || !/\d/.test(password)) {
+    throw new Error('La contraseña debe incluir al menos una letra y un número')
+  }
+}
+
+export function assertInviteEmail(email: string): string {
+  const next = email.trim().toLowerCase()
+  if (!isValidEmail(next)) {
+    throw new Error('Correo inválido')
+  }
+  if (!next.endsWith(`@${ALLOWED_INVITE_DOMAIN}`)) {
+    throw new Error(`Solo se pueden invitar correos @${ALLOWED_INVITE_DOMAIN}`)
+  }
+  return next
 }
 
 export function sanitizeCalendarName(name: string): string {

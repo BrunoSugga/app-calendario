@@ -11,6 +11,7 @@ import { normalizeEventKind } from '../types'
 const REMINDER_PREFIX = 'calendario.reminder.payload.'
 const OPEN_EVENT_KEY = 'calendario.pending.open-event'
 const START_TASK_KEY = 'calendario.pending.start-task'
+const RESCHEDULE_KEY = 'calendario.pending.reschedule'
 
 export type ReminderPayload = {
   title: string
@@ -20,12 +21,19 @@ export type ReminderPayload = {
   eventId: string
   kind: EventKind
   startsAt: string
+  originalStartsAt: string
   exp: number
 }
 
 export type OpenEventPayload = {
   eventId: string
   startsAt: string
+}
+
+export type RescheduleEventPayload = {
+  eventId: string
+  originalStartsAt: string
+  newStartsAt: string
 }
 
 export function isTauri(): boolean {
@@ -40,10 +48,15 @@ function sanitizeReminderFields(payload: {
   eventId?: unknown
   kind?: unknown
   startsAt?: unknown
+  originalStartsAt?: unknown
 }): Omit<ReminderPayload, 'exp'> | null {
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
   const startsAt = typeof payload.startsAt === 'string' ? payload.startsAt : ''
-  if (!isSafeId(eventId) || !isSafeIsoDate(startsAt)) return null
+  const originalStartsAt =
+    typeof payload.originalStartsAt === 'string' && payload.originalStartsAt
+      ? payload.originalStartsAt
+      : startsAt
+  if (!isSafeId(eventId) || !isSafeIsoDate(startsAt) || !isSafeIsoDate(originalStartsAt)) return null
   return {
     title: clampText(String(payload.title ?? ''), 200),
     timeLabel: clampText(String(payload.timeLabel ?? ''), 64),
@@ -52,6 +65,7 @@ function sanitizeReminderFields(payload: {
     eventId,
     kind: normalizeEventKind(payload.kind),
     startsAt: clampText(startsAt, 40),
+    originalStartsAt: clampText(originalStartsAt, 40),
   }
 }
 
@@ -131,6 +145,46 @@ export function consumeQueuedStartTask(): string | null {
   }
 }
 
+export function queueRescheduleEvent(payload: RescheduleEventPayload): void {
+  if (
+    !isSafeId(payload.eventId) ||
+    !isSafeIsoDate(payload.originalStartsAt) ||
+    !isSafeIsoDate(payload.newStartsAt)
+  ) {
+    return
+  }
+  localStorage.setItem(
+    RESCHEDULE_KEY,
+    JSON.stringify({ ...payload, at: Date.now() }),
+  )
+}
+
+export function consumeQueuedRescheduleEvent(): RescheduleEventPayload | null {
+  try {
+    const raw = localStorage.getItem(RESCHEDULE_KEY)
+    if (!raw) return null
+    localStorage.removeItem(RESCHEDULE_KEY)
+    const data = JSON.parse(raw) as RescheduleEventPayload & { at?: number }
+    if (!data?.eventId || !data?.originalStartsAt || !data?.newStartsAt) return null
+    if (
+      !isSafeId(data.eventId) ||
+      !isSafeIsoDate(data.originalStartsAt) ||
+      !isSafeIsoDate(data.newStartsAt)
+    ) {
+      return null
+    }
+    if (data.at && Date.now() - data.at > 60_000) return null
+    return {
+      eventId: data.eventId,
+      originalStartsAt: data.originalStartsAt,
+      newStartsAt: data.newStartsAt,
+    }
+  } catch {
+    localStorage.removeItem(RESCHEDULE_KEY)
+    return null
+  }
+}
+
 export async function focusMainWindow(): Promise<void> {
   if (!isTauri()) return
   const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
@@ -165,6 +219,24 @@ export async function notifyMainStartTask(eventId: string): Promise<void> {
   }
 }
 
+export async function notifyMainRescheduleEvent(payload: RescheduleEventPayload): Promise<void> {
+  if (
+    !isSafeId(payload.eventId) ||
+    !isSafeIsoDate(payload.originalStartsAt) ||
+    !isSafeIsoDate(payload.newStartsAt)
+  ) {
+    return
+  }
+  queueRescheduleEvent(payload)
+  if (isTauri()) {
+    const { emitTo } = await import('@tauri-apps/api/event')
+    await focusMainWindow()
+    await emitTo('main', 'calendario:reschedule-event', payload)
+  } else {
+    window.dispatchEvent(new CustomEvent('calendario:reschedule-event', { detail: payload }))
+  }
+}
+
 export async function openReminderWindow(payload: {
   title: string
   timeLabel: string
@@ -173,13 +245,18 @@ export async function openReminderWindow(payload: {
   eventId: string
   kind: EventKind
   startsAt: string
+  originalStartsAt: string
 }): Promise<void> {
   if (!isTauri()) {
     window.alert(`${payload.title}\n${payload.timeLabel}\n${payload.calendarName}`)
     return
   }
 
-  if (!isSafeId(payload.eventId) || !isSafeIsoDate(payload.startsAt)) {
+  if (
+    !isSafeId(payload.eventId) ||
+    !isSafeIsoDate(payload.startsAt) ||
+    !isSafeIsoDate(payload.originalStartsAt)
+  ) {
     console.error('Recordatorio omitido: identificadores inválidos')
     return
   }
@@ -192,8 +269,8 @@ export async function openReminderWindow(payload: {
   const win = new WebviewWindow(label, {
     url: `/?reminder=1&t=${encodeURIComponent(token)}`,
     title: 'Recordatorio',
-    width: 420,
-    height: 340,
+    width: 440,
+    height: 460,
     resizable: false,
     alwaysOnTop: true,
     center: true,

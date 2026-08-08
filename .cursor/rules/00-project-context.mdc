@@ -1,0 +1,23 @@
+---
+description: Contexto obligatorio del proyecto BMatrix Calendario — leer docs antes de trabajar
+alwaysApply: true
+---
+
+# Contexto del proyecto
+
+Antes de implementar o proponer cambios:
+
+1. Leé `AGENTS.md`.
+2. Leé `docs/ARCHITECTURE.md`.
+3. Si tocás auth, RLS, invites, roles o secrets: `docs/SECURITY.md`.
+4. Si tocás hosting, env, CSP headers o redirects: `docs/DEPLOY.md`.
+
+Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deploy.
+
+## Inviolables
+
+- Nunca `service_role` ni secretos de admin en frontend/Tauri/`VITE_*`.
+- Invites y altas privilegiadas solo vía Edge Functions.
+- Modo local ≠ seguridad multi-usuario.
+- Responder en español al usuario.
+- No commits salvo pedido explícito.

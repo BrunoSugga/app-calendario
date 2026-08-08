@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertCloudPassword,
+  assertInviteEmail,
   isSafeId,
   isSafeIsoDate,
   isSafeReminderToken,
@@ -15,7 +16,10 @@ describe('security helpers', () => {
     expect(isValidEmail('bruno@example.com')).toBe(true)
     expect(isValidEmail('mal')).toBe(false)
     expect(() => assertCloudPassword('123')).toThrow(/8 caracteres/)
-    expect(() => assertCloudPassword('12345678')).not.toThrow()
+    expect(() => assertCloudPassword('abcdefgh')).toThrow(/letra y un número/)
+    expect(() => assertCloudPassword('abcd1234')).not.toThrow()
+    expect(() => assertInviteEmail('user@bmatrix.org')).not.toThrow()
+    expect(() => assertInviteEmail('user@gmail.com')).toThrow(/bmatrix\.org/)
   })
 
   it('sanitiza drafts de evento', () => {

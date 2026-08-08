@@ -7,6 +7,19 @@ Aplicación de calendario estilo Outlook con:
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
+## Contexto del proyecto (agentes y humanos)
+
+Antes de trabajar en el repo, consultá:
+
+| Doc | Contenido |
+|-----|-----------|
+| [`AGENTS.md`](AGENTS.md) | Obligatorio al inicio de cada sesión de agente; cuándo actualizar docs |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Stack, modos cloud/local, mapa de carpetas |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Plan de seguridad: admin, invites, RLS, PKCE, Edge Functions |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Cloudflare Pages (objetivo) y legado GitHub Pages |
+
+Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
+
 ## Requisitos
 
 - Node.js 20+
@@ -21,7 +34,11 @@ Aplicación de calendario estilo Outlook con:
    - [`supabase/migrations/002_security_hardening.sql`](supabase/migrations/002_security_hardening.sql)
    - [`supabase/migrations/003_event_kinds.sql`](supabase/migrations/003_event_kinds.sql) (tipos Evento/Recordatorio/Tarea + historial)
    - [`supabase/migrations/004_task_runs_hardening.sql`](supabase/migrations/004_task_runs_hardening.sql) (RLS más estricto en historial de tareas)
-3. Copiá `.env.example` a `.env` y completá:
+   - [`supabase/migrations/005_admin_invites.sql`](supabase/migrations/005_admin_invites.sql) (rol admin + seed)
+   - [`supabase/migrations/006_rls_hardening.sql`](supabase/migrations/006_rls_hardening.sql) (policies + CHECKs)
+3. Desplegá la Edge Function `invite-user` (`supabase/functions/invite-user`).
+4. En Auth → Providers → Email: **desactivá signups públicos**.
+5. Copiá `.env.example` a `.env` y completá:
 
 ```env
 VITE_SUPABASE_URL=https://xxxx.supabase.co
@@ -32,18 +49,18 @@ Sin esas variables, la app arranca en **modo local**.
 
 ## Producción (web)
 
-La web se publica en GitHub Pages:
+Deploy en **Cloudflare Pages** (GitHub Pages apagado). Detalle: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-**https://brunosugga.github.io/app-calendario/**
-
-Cada push a `main` dispara el deploy (workflow `Deploy GitHub Pages`).
+- URL objetivo: **https://calendario.bmatrix.org**
+- Workflow: `Deploy Cloudflare Pages` (push a `main`)
+- Secrets CI: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 
 En Supabase → **Authentication → URL Configuration**:
 
-1. **Site URL:** `https://brunosugga.github.io/app-calendario/`
-2. **Redirect URLs:** agregá `https://brunosugga.github.io/app-calendario/**`
+1. **Site URL:** `https://calendario.bmatrix.org`
+2. **Redirect URLs:** `https://calendario.bmatrix.org/**` y `http://localhost:5173/**`
 
-Los secrets `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` viven en GitHub → Settings → Secrets.
+Altas de usuario: solo el **admin** invita correos `@bmatrix.org` (sidebar → Invitar usuario).
 
 ## Desarrollo
 
@@ -85,7 +102,7 @@ La primera vez hay que instalar el `.exe` con updater (1.0.1+). Después se actu
 
 ## Uso rápido
 
-1. Entrar con correo (y contraseña si hay Supabase).
+1. Entrar con correo (y contraseña si hay Supabase). En cloud no hay registro público: el admin invita.
 2. Crear eventos con clic en la rejilla horaria.
 3. Configurar repetición diaria/semanal/mensual.
 4. En escritorio, la app puede ocultarse al cerrar; los recordatorios abren una ventana encima.

@@ -3,9 +3,11 @@ import { addMinutes, format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
 import {
   consumeQueuedOpenEvent,
+  consumeQueuedRescheduleEvent,
   consumeQueuedStartTask,
   isTauri,
   openReminderWindow,
+  type RescheduleEventPayload,
 } from '../lib/tauri'
 import { isSafeId, isSafeIsoDate } from '../lib/security'
 import { useCalendarData } from '../context/CalendarDataContext'
@@ -35,6 +37,7 @@ function snoozeActive(eventId: string): boolean {
 type Options = {
   onOpenInCalendar?: (payload: { eventId: string; startsAt: string }) => void
   onStartTask?: (eventId: string) => void
+  onReschedule?: (payload: RescheduleEventPayload) => void
 }
 
 export function useReminders(options: Options = {}): void {
@@ -53,6 +56,16 @@ export function useReminders(options: Options = {}): void {
       if (!isSafeId(eventId)) return
       optionsRef.current.onStartTask?.(eventId)
     }
+    function handleReschedule(payload: RescheduleEventPayload) {
+      if (
+        !isSafeId(payload.eventId) ||
+        !isSafeIsoDate(payload.originalStartsAt) ||
+        !isSafeIsoDate(payload.newStartsAt)
+      ) {
+        return
+      }
+      optionsRef.current.onReschedule?.(payload)
+    }
 
     function onDomOpen(ev: Event) {
       const detail = (ev as CustomEvent<{ eventId: string; startsAt: string }>).detail
@@ -62,12 +75,20 @@ export function useReminders(options: Options = {}): void {
       const detail = (ev as CustomEvent<{ eventId: string }>).detail
       if (detail?.eventId) handleStart(detail.eventId)
     }
+    function onDomReschedule(ev: Event) {
+      const detail = (ev as CustomEvent<RescheduleEventPayload>).detail
+      if (detail?.eventId && detail?.originalStartsAt && detail?.newStartsAt) {
+        handleReschedule(detail)
+      }
+    }
 
     window.addEventListener('calendario:open-event', onDomOpen)
     window.addEventListener('calendario:start-task', onDomStart)
+    window.addEventListener('calendario:reschedule-event', onDomReschedule)
 
     let unlistenOpen: (() => void) | undefined
     let unlistenStart: (() => void) | undefined
+    let unlistenReschedule: (() => void) | undefined
     let cancelled = false
 
     if (isTauri()) {
@@ -82,6 +103,10 @@ export function useReminders(options: Options = {}): void {
           'calendario:start-task',
           (event) => handleStart(event.payload.eventId),
         )
+        unlistenReschedule = await listen<RescheduleEventPayload>(
+          'calendario:reschedule-event',
+          (event) => handleReschedule(event.payload),
+        )
       })()
     }
 
@@ -90,6 +115,8 @@ export function useReminders(options: Options = {}): void {
       if (open) handleOpen(open)
       const startId = consumeQueuedStartTask()
       if (startId) handleStart(startId)
+      const reschedule = consumeQueuedRescheduleEvent()
+      if (reschedule) handleReschedule(reschedule)
     }
     pollPending()
     const pendingId = window.setInterval(pollPending, 2000)
@@ -98,9 +125,11 @@ export function useReminders(options: Options = {}): void {
       cancelled = true
       window.removeEventListener('calendario:open-event', onDomOpen)
       window.removeEventListener('calendario:start-task', onDomStart)
+      window.removeEventListener('calendario:reschedule-event', onDomReschedule)
       window.clearInterval(pendingId)
       unlistenOpen?.()
       unlistenStart?.()
+      unlistenReschedule?.()
     }
   }, [])
 
@@ -140,6 +169,7 @@ export function useReminders(options: Options = {}): void {
           eventId: occ.eventId,
           kind: occ.kind,
           startsAt: formatISO(occ.startsAt),
+          originalStartsAt: formatISO(occ.originalStartsAt),
         })
       }
     }

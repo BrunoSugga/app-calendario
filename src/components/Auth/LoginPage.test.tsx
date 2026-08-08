@@ -5,11 +5,16 @@ import { LoginPage } from './LoginPage'
 
 const authMock = {
   signIn: vi.fn(),
-  signUp: vi.fn(),
+  signUpLocal: vi.fn(),
   signOut: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  completePasswordSetup: vi.fn(),
+  clearPasswordSetup: vi.fn(),
   user: null,
   loading: false,
   isCloud: false,
+  isAdmin: false,
+  needsPasswordSetup: false,
 }
 
 vi.mock('../../context/AuthContext', () => ({
@@ -19,7 +24,8 @@ vi.mock('../../context/AuthContext', () => ({
 describe('LoginPage', () => {
   beforeEach(() => {
     authMock.signIn.mockReset()
-    authMock.signUp.mockReset()
+    authMock.signUpLocal.mockReset()
+    authMock.requestPasswordReset.mockReset()
     authMock.isCloud = false
   })
 
@@ -37,27 +43,33 @@ describe('LoginPage', () => {
     expect(authMock.signIn).toHaveBeenCalledWith('bruno@example.com', 'local')
   })
 
-  it('cambia a registro y crea cuenta', async () => {
+  it('cambia a registro local y crea cuenta', async () => {
     const user = userEvent.setup()
-    authMock.signUp.mockResolvedValue(undefined)
+    authMock.signUpLocal.mockResolvedValue(undefined)
     render(<LoginPage />)
 
     await user.click(screen.getByRole('button', { name: /Crear una cuenta/i }))
     await user.type(screen.getByLabelText(/Nombre/i), 'Bruno')
     await user.type(screen.getByLabelText(/Correo/i), 'bruno@example.com')
-    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+    await user.click(screen.getByRole('button', { name: /Crear cuenta local/i }))
 
-    expect(authMock.signUp).toHaveBeenCalledWith(
-      'bruno@example.com',
-      'local',
-      'Bruno',
-    )
+    expect(authMock.signUpLocal).toHaveBeenCalledWith('bruno@example.com', 'Bruno')
   })
 
-  it('muestra contraseña en modo cloud', () => {
+  it('en cloud muestra contraseña, olvidé y sin registro público', async () => {
+    const user = userEvent.setup()
     authMock.isCloud = true
+    authMock.requestPasswordReset.mockResolvedValue(undefined)
     render(<LoginPage />)
+
     expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument()
-    expect(screen.getByText(/sincronizar entre dispositivos/i)).toBeInTheDocument()
+    expect(screen.getByText(/bmatrix\.org/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Crear una cuenta/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Olvidé mi contraseña/i }))
+    await user.type(screen.getByLabelText(/Correo/i), 'bruno@bmatrix.org')
+    await user.click(screen.getByRole('button', { name: /Enviar enlace/i }))
+
+    expect(authMock.requestPasswordReset).toHaveBeenCalledWith('bruno@bmatrix.org')
   })
 })

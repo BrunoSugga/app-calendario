@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { Sidebar } from '../components/Sidebar/Sidebar'
 import { Toolbar } from '../components/Toolbar/Toolbar'
@@ -11,6 +11,11 @@ import { useReminders } from '../hooks/useReminders'
 import { useAppUpdater } from '../hooks/useAppUpdater'
 import { dayRange, monthGridRange, navigateView, startOfDay, weekRange } from '../domain/dates'
 import { expandOccurrences } from '../domain/recurrence'
+import {
+  clearReminderStateForEvent,
+  withReagendadoPrefix,
+} from '../domain/reschedule'
+import type { RescheduleEventPayload } from '../lib/tauri'
 import type { EventDraft, Occurrence, ViewMode } from '../types'
 
 export function CalendarPage() {
@@ -36,6 +41,64 @@ export function CalendarPage() {
   >()
   const [focusEventId, setFocusEventId] = useState<string | null>(null)
 
+  const handleReschedule = useCallback(
+    async (payload: RescheduleEventPayload) => {
+      const master = events.find((e) => e.id === payload.eventId)
+      if (!master) return
+
+      const originalStartsAt = new Date(payload.originalStartsAt)
+      const newStartsAt = new Date(payload.newStartsAt)
+      if (Number.isNaN(originalStartsAt.getTime()) || Number.isNaN(newStartsAt.getTime())) return
+
+      const rangeStart = new Date(originalStartsAt.getTime() - 60 * 60 * 1000)
+      const rangeEnd = new Date(originalStartsAt.getTime() + 60 * 60 * 1000)
+      const occ =
+        expandOccurrences([master], calendars, exceptions, rangeStart, rangeEnd).find(
+          (o) => o.originalStartsAt.getTime() === originalStartsAt.getTime(),
+        ) ??
+        expandOccurrences(
+          [master],
+          calendars,
+          exceptions,
+          startOfDay(originalStartsAt),
+          new Date(startOfDay(originalStartsAt).getTime() + 24 * 60 * 60 * 1000 - 1),
+        ).find((o) => o.originalStartsAt.getTime() === originalStartsAt.getTime())
+
+      const titleSource = occ?.title ?? master.title
+      const description = occ?.description ?? master.description
+      const allDay = occ?.allDay ?? master.all_day
+      const reminderMinutes = occ?.reminderMinutes ?? master.reminder_minutes
+      const kind = occ?.kind ?? master.kind
+      const durationMs = occ
+        ? Math.max(0, occ.endsAt.getTime() - occ.startsAt.getTime())
+        : Math.max(0, new Date(master.ends_at).getTime() - new Date(master.starts_at).getTime())
+      const newEndsAt =
+        kind === 'reminder' ? newStartsAt : new Date(newStartsAt.getTime() + durationMs)
+      const isRecurring = Boolean(master.rrule || occ?.isRecurring)
+
+      clearReminderStateForEvent(payload.eventId)
+
+      await saveEvent({
+        id: master.id,
+        calendar_id: master.calendar_id,
+        title: withReagendadoPrefix(titleSource),
+        description,
+        starts_at: formatISO(newStartsAt),
+        ends_at: formatISO(newEndsAt),
+        all_day: allDay,
+        reminder_minutes: reminderMinutes,
+        rrule: master.rrule,
+        kind,
+        editScope: isRecurring ? 'single' : undefined,
+        occurrenceOriginalStartsAt: isRecurring ? formatISO(originalStartsAt) : undefined,
+      })
+
+      setSelectedDate(startOfDay(newStartsAt))
+      setView('day')
+    },
+    [calendars, events, exceptions, saveEvent],
+  )
+
   useReminders({
     onOpenInCalendar: (payload) => {
       setSelectedDate(startOfDay(new Date(payload.startsAt)))
@@ -44,6 +107,9 @@ export function CalendarPage() {
     },
     onStartTask: (eventId) => {
       void startTask(eventId)
+    },
+    onReschedule: (payload) => {
+      void handleReschedule(payload)
     },
   })
   useAppUpdater()

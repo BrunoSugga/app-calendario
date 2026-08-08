@@ -37,3 +37,6 @@ instaladores/
 .tauri/*.key
 .tauri/key-password.txt
 !.tauri/*.key.pub
+
+# Supabase CLI local
+supabase/.temp/

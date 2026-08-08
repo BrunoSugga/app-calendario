@@ -2,31 +2,32 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
 export function LoginPage() {
-  const { signIn, signUp, isCloud } = useAuth()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const { signIn, signUpLocal, requestPasswordReset, isCloud } = useAuth()
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
+    setInfo(null)
     try {
-      if (isCloud && mode === 'register' && password.length < 8) {
-        throw new Error('La contraseña debe tener al menos 8 caracteres')
+      if (mode === 'forgot') {
+        await requestPasswordReset(email.trim())
+        setInfo('Si el correo existe, te enviamos un enlace para crear una nueva contraseña.')
+        return
       }
       if (mode === 'login') {
         await signIn(email.trim(), isCloud ? password : 'local')
-      } else {
-        await signUp(
-          email.trim(),
-          isCloud ? password : 'local',
-          displayName.trim() || email.split('@')[0] || 'Usuario',
-        )
+        return
       }
+      // Registro solo en modo local
+      await signUpLocal(email.trim(), displayName.trim() || email.split('@')[0] || 'Usuario')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo autenticar')
     } finally {
@@ -44,12 +45,14 @@ export function LoginPage() {
         />
         <h1>BMatrix Calendario</h1>
         <p className="login-sub">
-          {isCloud
-            ? 'Iniciá sesión para sincronizar entre dispositivos'
-            : 'Modo local (sin Supabase). Los datos quedan en este navegador.'}
+          {mode === 'forgot'
+            ? 'Te enviamos un enlace para restablecer la contraseña'
+            : isCloud
+              ? 'Iniciá sesión con tu cuenta @bmatrix.org'
+              : 'Modo local (sin Supabase). Los datos quedan en este navegador.'}
         </p>
 
-        {mode === 'register' && (
+        {mode === 'register' && !isCloud && (
           <label>
             Nombre
             <input
@@ -68,12 +71,12 @@ export function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="bruno@ejemplo.com"
+            placeholder={isCloud ? 'nombre@bmatrix.org' : 'bruno@ejemplo.com'}
             autoComplete="email"
           />
         </label>
 
-        {isCloud && (
+        {isCloud && mode === 'login' && (
           <label>
             Contraseña
             <input
@@ -83,24 +86,49 @@ export function LoginPage() {
               maxLength={128}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoComplete="current-password"
             />
           </label>
         )}
 
         {error && <p className="form-error">{error}</p>}
+        {info && <p className="form-info">{info}</p>}
 
         <button type="submit" className="btn primary" disabled={busy}>
-          {busy ? 'Espere…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+          {busy
+            ? 'Espere…'
+            : mode === 'forgot'
+              ? 'Enviar enlace'
+              : mode === 'login'
+                ? 'Entrar'
+                : 'Crear cuenta local'}
         </button>
 
-        <button
-          type="button"
-          className="btn link"
-          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-        >
-          {mode === 'login' ? 'Crear una cuenta' : 'Ya tengo cuenta'}
-        </button>
+        {isCloud && mode === 'login' && (
+          <button type="button" className="btn link" onClick={() => setMode('forgot')}>
+            Olvidé mi contraseña
+          </button>
+        )}
+
+        {isCloud && mode === 'forgot' && (
+          <button type="button" className="btn link" onClick={() => setMode('login')}>
+            Volver al inicio de sesión
+          </button>
+        )}
+
+        {!isCloud && (
+          <button
+            type="button"
+            className="btn link"
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          >
+            {mode === 'login' ? 'Crear una cuenta' : 'Ya tengo cuenta'}
+          </button>
+        )}
+
+        {isCloud && mode === 'login' && (
+          <p className="login-hint">Las cuentas nuevas las crea el administrador por invitación.</p>
+        )}
       </form>
     </div>
   )

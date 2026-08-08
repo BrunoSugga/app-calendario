@@ -8,6 +8,7 @@ import { useCalendarData } from '../../context/CalendarDataContext'
 import { getAutostartEnabled, setAutostartEnabled } from '../../lib/autostart'
 import { isTauri } from '../../lib/tauri'
 import type { Occurrence } from '../../types'
+import { InviteUserModal } from '../Auth/InviteUserModal'
 import { MiniCalendar } from './MiniCalendar'
 
 type Props = {
@@ -25,7 +26,7 @@ export function Sidebar({
   pendingTasksOnly,
   onPendingTasksOnlyChange,
 }: Props) {
-  const { user, signOut, isCloud } = useAuth()
+  const { user, signOut, isCloud, isAdmin } = useAuth()
   const {
     calendars,
     events,
@@ -38,6 +39,7 @@ export function Sidebar({
   const [newName, setNewName] = useState('')
   const [autostart, setAutostart] = useState(false)
   const [autostartMsg, setAutostartMsg] = useState<string | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const desktop = isTauri()
 
   useEffect(() => {
@@ -67,11 +69,18 @@ export function Sidebar({
       </div>
       <div className="sidebar-user">
         <strong>{user?.displayName}</strong>
-        <span>{isCloud ? 'Sync nube' : 'Modo local'}</span>
+        <span>{isCloud ? (isAdmin ? 'Admin · Sync nube' : 'Sync nube') : 'Modo local'}</span>
+        {isCloud && isAdmin && (
+          <button type="button" className="btn link tiny" onClick={() => setInviteOpen(true)}>
+            Invitar usuario
+          </button>
+        )}
         <button type="button" className="btn link tiny" onClick={() => void signOut()}>
           Salir
         </button>
       </div>
+
+      <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
 
       <div className="mini-cal-stack">
         <MiniCalendar
