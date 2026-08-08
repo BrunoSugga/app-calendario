@@ -258,14 +258,6 @@ export function ReminderWindow() {
             onApply={() => void applyLong()}
             disabled={busy}
           />
-          <button
-            type="button"
-            className="btn"
-            disabled={busy}
-            onClick={() => setShowReschedule((v) => !v)}
-          >
-            Reagendar
-          </button>
         </div>
         {showReschedule && (
           <div className="reschedule-panel">
@@ -294,11 +286,19 @@ export function ReminderWindow() {
               Empezar tarea
             </button>
           )}
-          <button type="button" className="btn" disabled={busy} onClick={() => void openInCalendar()}>
-            Abrir en calendario
-          </button>
           <button type="button" className="btn" disabled={busy} onClick={() => void closeWindow()}>
             Descartar
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={busy}
+            onClick={() => setShowReschedule((v) => !v)}
+          >
+            Reagendar
+          </button>
+          <button type="button" className="btn" disabled={busy} onClick={() => void openInCalendar()}>
+            Abrir
           </button>
         </div>
       </footer>
