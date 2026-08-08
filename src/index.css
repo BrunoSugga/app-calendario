@@ -259,9 +259,61 @@ textarea:focus {
 }
 
 .sidebar-brand strong {
+  flex: 1;
+  min-width: 0;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
   color: var(--celeste-soft);
+}
+
+.sidebar-settings {
+  position: relative;
+  margin-left: auto;
+}
+
+.sidebar-settings-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.sidebar-settings-btn:hover,
+.sidebar-settings-btn[aria-expanded='true'] {
+  color: var(--celeste-soft);
+}
+
+.sidebar-settings-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 10.5rem;
+  padding: 0.25rem 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: #1a2030;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.sidebar-settings-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text, #e8eef8);
+  text-align: left;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sidebar-settings-item:hover {
+  background: rgba(58, 138, 223, 0.25);
+  color: var(--celeste-soft, #9ec9f5);
 }
 
 .sidebar-user {
