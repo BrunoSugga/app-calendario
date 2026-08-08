@@ -112,9 +112,11 @@ npm test
 - [x] Signup público off
 - [x] Cloudflare Pages live
 - [x] `calendario.bmatrix.org` Active
-- [ ] Site URL = `https://calendario.bmatrix.org`
-- [ ] Invite OK en incógnito (tras cooldown rate limit si aplica)
-- [ ] Rotar tokens pegados en chat
+- [x] Site URL = `https://calendario.bmatrix.org` (verificar en dashboard si hay fallos de mail)
+- [x] Invite OK desde navegador; escritorio usa redirect público (v1.0.8+)
+- [x] Baseline primeros usuarios **v1.1.0**
+- [ ] Rotar tokens pegados en chat (si aplica)
+- [ ] (Opcional) Cloudflare Access
 
 ## Deuda menor
 

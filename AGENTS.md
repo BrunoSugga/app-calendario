@@ -38,18 +38,19 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-08)
+## Estado actual (2026-08-08) — baseline primeros usuarios **v1.1.0**
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
+- **Baseline primer lote de usuarios:** desktop **v1.1.0** + web en `calendario.bmatrix.org` (mismo código en `main`).
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
-- **Web live:** `https://calendario.bmatrix.org` (también `https://bmx-calendario.pages.dev`).
-- **Custom domain:** `calendario.bmatrix.org` → **Active** en Cloudflare Pages.
-- **Site URL Supabase:** `https://calendario.bmatrix.org` (Redirect URLs: custom + pages.dev + localhost).
-- **Invites:** cualquier email; si el user ya existe → Edge Function reenvía recovery.
-- **Rate limit mails Supabase (free):** error `email rate limit exceeded` → esperar ~30–60 min; no spamear invites.
-- **Borrar usuarios:** solo en Supabase → Authentication → Users (no hay UI en la app).
-- **GitHub Pages:** workflow deshabilitado.
-- **Tests auth:** `authLink.test.ts` + `security.test.ts` (suite ~57 tests).
-- **Desktop:** última release publicada según tag GitHub; bump de versión en `package.json` + `src-tauri/tauri.conf.json` + `Cargo.toml` antes de `Release desktop`.
-- **Avisos:** misma UI en web (popup) y Tauri; detalle en `docs/ARCHITECTURE.md` § Avisos. En navegador hay que permitir popups del dominio.
+- **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
+- **Custom domain:** Active en Cloudflare Pages.
+- **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost).
+- **Invites:** cualquier email; desde Tauri el redirect usa `VITE_PUBLIC_APP_URL` / `calendario.bmatrix.org` (no `tauri.localhost`). UI: rueda de ajustes en sidebar → Invitar / Salir.
+- **Avisos:** steppers (flechas + doble clic lista), botones Descartar → Reagendar → Abrir; lookback 5 min en scan (`domain/reminders.ts`). Popups requeridos en web.
+- **Rate limit mails Supabase (free):** `email rate limit exceeded` → esperar ~30–60 min.
+- **Borrar usuarios:** solo Dashboard Supabase → Authentication → Users.
+- **GitHub Pages:** apagado. Deploy web: Cloudflare Pages al push a `main`.
+- **Desktop publish:** bump `package.json` + `tauri.conf.json` + `Cargo.toml`/`Cargo.lock` → Actions → **Release desktop**.
+- **Tests:** auth + security + `reminders.test.ts` (regresión alarmas duración 0).

@@ -46,13 +46,22 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - [x] Secrets Cloudflare en GitHub
 - [x] Redirect URLs en Supabase (pages.dev + calendario + localhost)
 - [x] `calendario.bmatrix.org` **Active** en Cloudflare
-- [ ] Site URL Supabase = `https://calendario.bmatrix.org` (hacerlo al quedar Active)
-- [ ] Invite + set-password probado en incógnito
+- [x] Site URL Supabase = `https://calendario.bmatrix.org` (confirmar en dashboard si un invite falla)
+- [x] Invite + set-password probado (navegador OK; escritorio desde v1.0.8+)
+- [x] Baseline primeros usuarios: desktop **v1.1.0** + web canónica
 - [ ] (Opcional) Cloudflare Access después
+- [ ] Rotar tokens si se pegaron en chats antiguos
+
+## Desktop
+
+- Publicar: Actions → **Release desktop** con la versión alineada a `package.json` / `tauri.conf.json` / `Cargo.toml`.
+- La app instalada (1.0.1+) pregunta al abrir si hay release más nueva (`latest.json` del updater).
+- **v1.1.0** = primera versión recomendada para el lote inicial de usuarios.
 
 ## Deuda / notas
 
 - No poner `service_role` ni tokens en el repo.
 - Rotar tokens de Supabase/Cloudflare si se pegaron en el chat.
-- Access (Zero Trust) solo después de que invite/recovery funcionen.
-- Avisos en web: el sitio abre una ventana emergente (`?reminder=1`). Si no aparece el aviso completo, permitir popups para `calendario.bmatrix.org` / `bmx-calendario.pages.dev`. Detalle: `docs/ARCHITECTURE.md`.
+- Access (Zero Trust) solo después de que invite/recovery funcionen de forma estable.
+- Avisos en web: popup (`?reminder=1`); permitir emergentes. Detalle: `docs/ARCHITECTURE.md`.
+- Rate limit email Supabase free: no spamear invites.

@@ -79,13 +79,20 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 - Aplazamientos:
   - **≤12 h** (stepper min/h): solo silencia (`calendario.snooze.*`).
   - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
+  - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
+  - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
 - Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
+
+## UI principal
+
+- Sidebar brand: logo + título + **rueda de ajustes** (menú: Invitar usuario si admin, Salir).
+- Updater desktop vía GitHub Releases (`release.yml`).
 
 ## Escritorio (Tauri)
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Updater vía GitHub Releases (workflow `release.yml`).
+- Baseline primeros usuarios: **v1.1.0**.
 
 ## Deploy web
 

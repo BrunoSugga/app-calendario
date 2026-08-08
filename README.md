@@ -7,6 +7,8 @@ Aplicación de calendario estilo Outlook con:
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
+**Producción (baseline primeros usuarios v1.1.0):** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · escritorio vía GitHub Releases.
+
 ## Contexto del proyecto (agentes y humanos)
 
 Antes de trabajar en el repo, consultá:
@@ -22,7 +24,7 @@ Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
 
 ## Requisitos
 
-- Node.js 20+
+- Node.js 20+ (CI usa Node 24)
 - Para escritorio: [Rust](https://rustup.rs/) y **Visual Studio Build Tools 2022** con workload “Desktop development with C++” (MSVC)
 - Proyecto [Supabase](https://supabase.com) (opcional para sync)
 

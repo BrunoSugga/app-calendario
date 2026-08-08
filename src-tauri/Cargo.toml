@@ -1,6 +1,6 @@
 [package]
 name = "calendario"
-version = "1.0.9"
+version = "1.1.0"
 description = "BMatrix Calendario multi-dispositivo estilo Outlook"
 authors = ["Bruno"]
 license = "MIT"
