@@ -2,12 +2,23 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { assertCloudPassword } from '../../lib/security'
 
+function isRecoveryFlow(): boolean {
+  const hash = window.location.hash.replace(/^#/, '')
+  if (hash) {
+    const type = new URLSearchParams(hash).get('type')
+    if (type === 'recovery') return true
+    if (type === 'invite') return false
+  }
+  return false
+}
+
 export function SetPasswordPage() {
   const { completePasswordSetup, signOut, user, loading } = useAuth()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const recovery = isRecoveryFlow()
 
   if (!loading && !user) {
     return (
@@ -51,16 +62,21 @@ export function SetPasswordPage() {
           src={`${import.meta.env.BASE_URL}logo.png`}
           alt="BMatrix Calendario"
         />
-        <h1>Creá tu contraseña</h1>
+        <h1>{recovery ? 'Restablecé tu contraseña' : 'Activá tu cuenta'}</h1>
         <p className="login-sub">
-          {user?.email
-            ? `Definí una contraseña para ${user.email}`
-            : 'Definí una contraseña para activar tu cuenta'}
-          . Mínimo 8 caracteres, con al menos una letra y un número.
+          {recovery
+            ? 'Elegí una contraseña nueva para volver a entrar.'
+            : 'Te invitaron a BMatrix Calendario. Esta pantalla es solo para vos: creá tu propia contraseña para usar la app.'}
         </p>
+        {user?.email && (
+          <p className="login-hint">
+            Tu usuario será: <strong>{user.email}</strong>
+          </p>
+        )}
+        <p className="login-hint">Mínimo 8 caracteres, con al menos una letra y un número.</p>
 
         <label>
-          Nueva contraseña
+          {recovery ? 'Nueva contraseña' : 'Tu contraseña'}
           <input
             type="password"
             required
@@ -88,7 +104,7 @@ export function SetPasswordPage() {
         {error && <p className="form-error">{error}</p>}
 
         <button type="submit" className="btn primary" disabled={busy}>
-          {busy ? 'Guardando…' : 'Guardar e ingresar'}
+          {busy ? 'Guardando…' : recovery ? 'Guardar e ingresar' : 'Activar e ingresar'}
         </button>
 
         <button type="button" className="btn link" onClick={() => void signOut()}>
