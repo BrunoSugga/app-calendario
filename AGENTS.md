@@ -38,11 +38,11 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-08) — baseline primeros usuarios **v1.1.0**
+## Estado actual (2026-08-08) — baseline primeros usuarios **v1.1.1**
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- **Baseline primer lote de usuarios:** desktop **v1.1.0** + web en `calendario.bmatrix.org` (mismo código en `main`).
+- **Baseline primer lote de usuarios:** desktop **v1.1.1** + web en `calendario.bmatrix.org` (mismo código en `main`). Semana laboral en rueda de ajustes.
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
 - **Custom domain:** Active en Cloudflare Pages.
