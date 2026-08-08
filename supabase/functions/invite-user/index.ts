@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   })
 
   const redirectTo =
-    typeof payload.redirectTo === 'string' && payload.redirectTo.startsWith('https://')
+    typeof payload.redirectTo === 'string' && isSafeRedirect(payload.redirectTo)
       ? payload.redirectTo
       : undefined
 
@@ -94,3 +94,19 @@ Deno.serve(async (req) => {
 
   return json(200, { ok: true, email })
 })
+
+function isSafeRedirect(value: string): boolean {
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol === 'https:') return true
+    if (
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+    ) {
+      return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}

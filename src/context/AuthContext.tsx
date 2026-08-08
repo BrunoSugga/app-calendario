@@ -7,8 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 import { isCloudMode, supabase } from '../lib/supabase'
+import {
+  clearPasswordSetupMark,
+  consumeInboundAuthLink,
+  isSafeAuthRedirect,
+} from '../lib/authLink'
 import {
   getLocalSession,
   loadLocalDb,
@@ -59,74 +64,6 @@ function normalizeEmail(email: string): string {
   return next
 }
 
-function getHashParams(): URLSearchParams {
-  return new URLSearchParams(window.location.hash.replace(/^#/, ''))
-}
-
-function isPasswordSetupType(type: string | null): boolean {
-  return type === 'invite' || type === 'recovery' || type === 'signup'
-}
-
-function stripAuthHashKeepSetupFlag(forceSetup: boolean) {
-  const url = new URL(window.location.href)
-  url.hash = ''
-  if (forceSetup) url.searchParams.set('set-password', '1')
-  else url.searchParams.delete('set-password')
-  window.history.replaceState({}, '', `${url.pathname}${url.search}`)
-}
-
-/**
- * Si el link trae tokens de invite/recovery, limpia la sesión local (p. ej. admin)
- * y aplica la sesión del link. Evita cambiar la contraseña del usuario equivocado.
- */
-async function consumeInboundAuthLink(
-  client: SupabaseClient,
-): Promise<{ needsPasswordSetup: boolean }> {
-  const hashParams = getHashParams()
-  const accessToken = hashParams.get('access_token')
-  const refreshToken = hashParams.get('refresh_token')
-  const type = hashParams.get('type')
-  const query = new URLSearchParams(window.location.search)
-  const code = query.get('code')
-  const flaggedSetup = query.get('set-password') === '1'
-  const inbound =
-    Boolean(accessToken && refreshToken) ||
-    Boolean(code) ||
-    isPasswordSetupType(type)
-
-  if (!inbound) {
-    return { needsPasswordSetup: flaggedSetup }
-  }
-
-  // Crítico: no reutilizar la sesión del admin abierta en este navegador
-  await client.auth.signOut({ scope: 'local' })
-
-  if (accessToken && refreshToken) {
-    const { error } = await client.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    })
-    if (error) throw error
-    const needsPasswordSetup = flaggedSetup || isPasswordSetupType(type)
-    stripAuthHashKeepSetupFlag(needsPasswordSetup)
-    return { needsPasswordSetup }
-  }
-
-  if (code) {
-    const { error } = await client.auth.exchangeCodeForSession(code)
-    if (error) throw error
-    const needsPasswordSetup = flaggedSetup || isPasswordSetupType(type)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('code')
-    if (needsPasswordSetup) url.searchParams.set('set-password', '1')
-    url.hash = ''
-    window.history.replaceState({}, '', `${url.pathname}${url.search}`)
-    return { needsPasswordSetup }
-  }
-
-  return { needsPasswordSetup: flaggedSetup || isPasswordSetupType(type) }
-}
-
 async function mapCloudUser(user: User): Promise<AuthUser> {
   let displayName = mapDisplayName(user)
   let role: UserRole = 'member'
@@ -147,6 +84,10 @@ async function mapCloudUser(user: User): Promise<AuthUser> {
   }
 }
 
+function appOriginBase(): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/?$/, '/')
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -162,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const inbound = await consumeInboundAuthLink(supabase)
           setup = inbound.needsPasswordSetup
         } catch {
-          setup = new URLSearchParams(window.location.search).get('set-password') === '1'
+          setup = false
         }
         if (!mounted) return
         setNeedsPasswordSetup(setup)
@@ -179,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (event === 'SIGNED_OUT') {
             setNeedsPasswordSetup(false)
+            clearPasswordSetupMark()
             setUser(null)
             return
           }
@@ -251,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isCloudMode && supabase) {
       await supabase.auth.signOut()
       setNeedsPasswordSetup(false)
+      clearPasswordSetupMark()
       setUser(null)
       return
     }
@@ -263,9 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('El restablecimiento de contraseña solo aplica en modo nube')
     }
     const normalized = normalizeEmail(email)
-    const baseUrl = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/?$/, '/')
+    const redirectTo = `${appOriginBase()}?set-password=1`
+    if (!isSafeAuthRedirect(redirectTo)) {
+      throw new Error('URL de redirección inválida')
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(normalized, {
-      redirectTo: `${baseUrl}?set-password=1`,
+      redirectTo,
     })
     if (error) throw error
   }, [])
@@ -284,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.updateUser({ password })
     if (error) throw error
     setNeedsPasswordSetup(false)
+    clearPasswordSetupMark()
     if (data.user) setUser(await mapCloudUser(data.user))
     const url = new URL(window.location.href)
     url.searchParams.delete('set-password')
@@ -293,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearPasswordSetup = useCallback(() => {
     setNeedsPasswordSetup(false)
+    clearPasswordSetupMark()
   }, [])
 
   const value = useMemo(

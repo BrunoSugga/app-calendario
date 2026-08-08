@@ -11,7 +11,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SAFE_ID_RE = /^[A-Za-z0-9_-]{2,80}$/
 const SAFE_TOKEN_RE = /^[A-Za-z0-9_-]{8,80}$/
 const SAFE_ISO_RE = /^\d{4}-\d{2}-\d{2}(?:[T ][\d:.+-Z]+)?$/
-const SAFE_RRULE_CHARS_RE = /^[A-Za-z0-9:;=,\n\r_\/+-]+$/
+const SAFE_RRULE_CHARS_RE = /^[A-Za-z0-9:;=,\n\r_/+-]+$/
 
 export function clampText(value: string, max: number): string {
   return value.trim().slice(0, max)

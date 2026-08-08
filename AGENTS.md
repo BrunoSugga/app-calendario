@@ -37,12 +37,13 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Operaciones privilegiadas (invitar usuarios, etc.) solo vía **Supabase Edge Functions** con `service_role` en el servidor.
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 
-## Estado de seguridad (objetivo)
+## Estado de seguridad
 
-Ver plan detallado en `docs/SECURITY.md`. Resumen:
+Ver `docs/SECURITY.md`. Resumen:
 
 - Signup público deshabilitado (UI cloud + Dashboard).
-- Solo un **admin** (`bfd18782-7bea-4386-bd8f-de050f398aec`) puede invitar usuarios (cualquier email válido).
-- El invitado define contraseña en el primer acceso (invite / recovery).
-- RLS estricto + CHECKs en migraciones `005`/`006`.
-- Deploy web: **Cloudflare Pages** (`calendario.bmatrix.org`); GitHub Pages apagado.
+- Solo un **admin** (`bfd18782-7bea-4386-bd8f-de050f398aec`) puede invitar (cualquier email válido).
+- Invite/recovery: `src/lib/authLink.ts` limpia sesión local antes de aplicar el token del mail (no pisar admin).
+- RLS + CHECKs en migraciones `005`/`006`.
+- Deploy web: **Cloudflare Pages** (`calendario.bmatrix.org` / `bmx-calendario.pages.dev`).
+- Tests de seguridad: `authLink.test.ts` + `security.test.ts` (correr `npm test` ante cambios de auth).

@@ -29,11 +29,14 @@ src/
   hooks/          recordatorios, updater
   lib/
     security.ts   sanitización / CSP web
-    supabase.ts   cliente anon + PKCE
+    authLink.ts   consume invite/recovery sin pisar otra sesión
+    invite.ts     llama Edge Function invite-user
+    supabase.ts   cliente anon + PKCE (detectSessionInUrl=false)
     localStore.ts modo local
     repositories/ local vs cloud
   pages/          CalendarPage
 supabase/migrations/   esquema + RLS
+supabase/functions/    Edge Functions (invite-user)
 src-tauri/             app escritorio + capabilities
 docs/                  contexto del proyecto (leer al inicio de sesión)
 ```
@@ -50,18 +53,18 @@ Tablas principales (todas con RLS):
 
 Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendario default.
 
-## Auth (objetivo post-hardening)
+## Auth (cloud)
 
 - Sin registro público en la UI cloud.
-- Admin invita por email → Edge Function → `auth.admin.inviteUserByEmail`.
-- Invitado abre el link → pantalla “definir contraseña” → sesión lista.
-- Detalle y checklist: `docs/SECURITY.md`.
+- Admin invita por email → Edge Function → `auth.admin.inviteUserByEmail` (cualquier dominio).
+- Invitado abre el link → `authLink.consumeInboundAuthLink` (limpia sesión previa) → `SetPasswordPage`.
+- Detalle: `docs/SECURITY.md`.
 
 ## Seguridad en cliente
 
 - Solo clave **anon** en el front (`VITE_*`).
-- Sanitización en `src/lib/security.ts` (límites de texto, email, rrule, drafts).
-- CSP web en producción (`applyWebCsp`); en Cloudflare también headers HTTP (ver `docs/DEPLOY.md`).
+- Sanitización en `src/lib/security.ts`.
+- CSP web en producción (`applyWebCsp`); headers HTTP en Cloudflare (`public/_headers`).
 
 ## Escritorio (Tauri)
 
@@ -71,5 +74,5 @@ Al crear un usuario en Auth, el trigger `handle_new_user` crea perfil + calendar
 
 ## Deploy web
 
-- Histórico: GitHub Pages (`VITE_BASE=/app-calendario/`).
-- Objetivo: Cloudflare Pages en raíz (`VITE_BASE=/`). Ver `docs/DEPLOY.md`.
+- **Cloudflare Pages** (`VITE_BASE=/`): `bmx-calendario.pages.dev` / `calendario.bmatrix.org`.
+- GitHub Pages deshabilitado. Ver `docs/DEPLOY.md`.

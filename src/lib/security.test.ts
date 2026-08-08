@@ -17,9 +17,11 @@ describe('security helpers', () => {
     expect(isValidEmail('mal')).toBe(false)
     expect(() => assertCloudPassword('123')).toThrow(/8 caracteres/)
     expect(() => assertCloudPassword('abcdefgh')).toThrow(/letra y un número/)
+    expect(() => assertCloudPassword('  abcd1234')).toThrow(/espacios/)
     expect(() => assertCloudPassword('abcd1234')).not.toThrow()
     expect(() => assertInviteEmail('user@bmatrix.org')).not.toThrow()
     expect(() => assertInviteEmail('user@gmail.com')).not.toThrow()
+    expect(() => assertInviteEmail('user@camposur.com.uy')).not.toThrow()
     expect(() => assertInviteEmail('mal')).toThrow(/Correo inválido/)
   })
 
@@ -73,5 +75,34 @@ describe('security helpers', () => {
     expect(() => sanitizeRRule('FREQ=DAILY;COUNT=99999')).toThrow(/inválida/)
     expect(() => sanitizeRRule('FREQ=YEARLY')).toThrow(/inválida/)
     expect(() => sanitizeRRule('javascript:alert(1)')).toThrow(/inválida/)
+  })
+
+  it('no permite service_role ni patrones peligrosos en inputs de texto acotados', () => {
+    expect(() =>
+      sanitizeEventDraft({
+        calendar_id: 'c1',
+        title: '',
+        description: '',
+        starts_at: '2026-08-02T10:00:00.000Z',
+        ends_at: '2026-08-02T11:00:00.000Z',
+        all_day: false,
+        reminder_minutes: 15,
+        rrule: null,
+        kind: 'event',
+      }),
+    ).toThrow(/título/i)
+    expect(() =>
+      sanitizeEventDraft({
+        calendar_id: '../hack',
+        title: 'x',
+        description: '',
+        starts_at: '2026-08-02T10:00:00.000Z',
+        ends_at: '2026-08-02T11:00:00.000Z',
+        all_day: false,
+        reminder_minutes: 15,
+        rrule: null,
+        kind: 'event',
+      }),
+    ).toThrow(/Calendario inválido/)
   })
 })

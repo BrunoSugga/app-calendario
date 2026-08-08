@@ -1,16 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { getPasswordSetupMode } from '../../lib/authLink'
 import { assertCloudPassword } from '../../lib/security'
-
-function isRecoveryFlow(): boolean {
-  const hash = window.location.hash.replace(/^#/, '')
-  if (hash) {
-    const type = new URLSearchParams(hash).get('type')
-    if (type === 'recovery') return true
-    if (type === 'invite') return false
-  }
-  return false
-}
 
 export function SetPasswordPage() {
   const { completePasswordSetup, signOut, user, loading } = useAuth()
@@ -18,7 +9,8 @@ export function SetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const recovery = isRecoveryFlow()
+  const mode = getPasswordSetupMode()
+  const recovery = mode === 'recovery'
 
   if (!loading && !user) {
     return (
@@ -26,8 +18,9 @@ export function SetPasswordPage() {
         <div className="login-card">
           <h1>Enlace incompleto</h1>
           <p className="login-sub">
-            Abrí el link del correo de invitación o de restablecimiento. Si expiró, pedí uno nuevo
-            desde “Olvidé mi contraseña”.
+            Abrí el link del correo de invitación o de restablecimiento en una ventana donde no
+            estés logueado como otro usuario. Si expiró, pedí uno nuevo desde “Olvidé mi
+            contraseña”.
           </p>
           <button type="button" className="btn primary" onClick={() => void signOut()}>
             Ir al inicio
