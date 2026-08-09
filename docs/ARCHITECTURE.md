@@ -101,7 +101,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline primeros usuarios: **v1.1.1**.
+- Baseline: **v1.1.2**.
 
 ## Deploy web
 
