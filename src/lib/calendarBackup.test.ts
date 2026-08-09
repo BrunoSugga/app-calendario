@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  assertBackupFileWithinLimit,
   buildCalendarBackup,
+  MAX_BACKUP_EVENTS,
+  MAX_BACKUP_EXCEPTIONS,
+  MAX_BACKUP_FILE_BYTES,
+  MAX_BACKUP_TASK_RUNS,
   parseCalendarBackup,
   remapBackupForImport,
 } from './calendarBackup'
@@ -91,5 +96,54 @@ describe('calendarBackup + deleteCalendar', () => {
     state = await repo.updateCalendar(state, id, { name: 'Casa', color: '#FF00AA' })
     expect(state.calendars[0].name).toBe('Casa')
     expect(state.calendars[0].color).toBe('#FF00AA')
+  })
+
+  it('rechaza archivos de respaldo demasiado grandes o vacíos', () => {
+    expect(() => assertBackupFileWithinLimit({ size: 0 })).toThrow(/vacío/i)
+    expect(() => assertBackupFileWithinLimit({ size: MAX_BACKUP_FILE_BYTES + 1 })).toThrow(
+      /máximo/i,
+    )
+    expect(() => assertBackupFileWithinLimit({ size: 12 })).not.toThrow()
+  })
+
+  it('rechaza arrays de excepciones o taskRuns fuera de tope', () => {
+    const base = {
+      version: 1,
+      exportedAt: '2026-08-09T12:00:00.000Z',
+      calendar: { name: 'X', color: '#3D9BE0' },
+      events: [] as unknown[],
+      exceptions: [] as unknown[],
+      taskRuns: [] as unknown[],
+    }
+
+    expect(() =>
+      parseCalendarBackup(
+        {
+          ...base,
+          events: Array.from({ length: MAX_BACKUP_EVENTS + 1 }, () => ({})),
+        },
+        'user-1',
+      ),
+    ).toThrow(/eventos/i)
+
+    expect(() =>
+      parseCalendarBackup(
+        {
+          ...base,
+          exceptions: Array.from({ length: MAX_BACKUP_EXCEPTIONS + 1 }, () => ({})),
+        },
+        'user-1',
+      ),
+    ).toThrow(/excepciones/i)
+
+    expect(() =>
+      parseCalendarBackup(
+        {
+          ...base,
+          taskRuns: Array.from({ length: MAX_BACKUP_TASK_RUNS + 1 }, () => ({})),
+        },
+        'user-1',
+      ),
+    ).toThrow(/historial/i)
   })
 })

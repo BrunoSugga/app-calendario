@@ -24,7 +24,7 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 
 ## Recordatorios operativos (2026-08)
 
-- **Baseline usuarios:** desktop **v1.1.2** (+ web `calendario.bmatrix.org`).
+- **Baseline usuarios:** desktop **v1.1.3** (+ web `calendario.bmatrix.org`).
 - Web canónica: `https://calendario.bmatrix.org`. Fallback: `bmx-calendario.pages.dev`.
 - Site URL Supabase = `https://calendario.bmatrix.org`.
 - Invites desde Tauri: redirect público (`VITE_PUBLIC_APP_URL`), no origin del webview.

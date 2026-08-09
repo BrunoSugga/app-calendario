@@ -92,6 +92,12 @@ sequenceDiagram
 - Admin no lee calendarios ajenos; solo gestiona altas.
 - `work_week_settings`: 1 fila por usuario; RLS select/insert/update/delete own; trigger exige que `work_calendar_id` (si no null) pertenezca al mismo `user_id`.
 
+### Respaldos JSON (export / import)
+
+- Export: blob local + nombre sanitizado (`backupFilename`); sin path traversal.
+- Import: remapeo de IDs (`remapBackupForImport`) + RLS; no se puede escribir en datos ajenos.
+- Límites DoS: archivo ≤ **5 MB** (`assertBackupFileWithinLimit` antes de leer); máx. **5000** eventos, **5000** excepciones, **10000** task runs (`calendarBackup.ts`).
+
 ---
 
 ## Tests
@@ -102,6 +108,7 @@ npm test
 
 - `security.test.ts` — password, emails, sanitización.
 - `authLink.test.ts` — sesión, token_hash, PKCE, errores URL, set-password stale.
+- `calendarBackup.test.ts` — export/import, topes de tamaño y arrays.
 - `LoginPage.test.tsx` — cloud sin signup público.
 
 ---

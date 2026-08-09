@@ -38,11 +38,11 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-09) — baseline **v1.1.2**
+## Estado actual (2026-08-09) — baseline **v1.1.3**
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- **Baseline:** desktop **v1.1.2** + web en `calendario.bmatrix.org` (mismo código en `main`). Prefs de calendario por dispositivo; Gestionar calendarios; CTA descarga PC en web.
+- **Baseline:** desktop **v1.1.3** + web en `calendario.bmatrix.org` (mismo código en `main`). Prefs de calendario por dispositivo; Gestionar calendarios; CTA descarga PC en web; topes DoS en import de respaldos.
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
 - **Custom domain:** Active en Cloudflare Pages.

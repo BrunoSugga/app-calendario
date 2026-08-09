@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useCalendarData } from '../../context/CalendarDataContext'
 import {
+  assertBackupFileWithinLimit,
   buildCalendarBackup,
   downloadCalendarBackup,
+  MAX_BACKUP_FILE_BYTES,
   parseCalendarBackup,
 } from '../../lib/calendarBackup'
 import { useAuth } from '../../context/AuthContext'
@@ -166,7 +168,11 @@ export function ManageCalendarsModal({ open, onClose }: Props) {
     setError(null)
     setMsg(null)
     try {
+      assertBackupFileWithinLimit(file)
       const text = await file.text()
+      if (text.length > MAX_BACKUP_FILE_BYTES) {
+        throw new Error('El contenido del respaldo supera el tamaño máximo permitido')
+      }
       const raw = JSON.parse(text) as unknown
       const backup = parseCalendarBackup(raw, user.id)
       await importCalendarBackup(backup)

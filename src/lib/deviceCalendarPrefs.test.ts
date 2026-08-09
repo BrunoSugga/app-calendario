@@ -9,6 +9,7 @@ import {
   seedDevicePrefsFromCalendars,
   setDefaultInPrefs,
   toggleHiddenInPrefs,
+  type DeviceCalendarPrefs,
 } from './deviceCalendarPrefs'
 
 function cal(partial: Partial<Calendar> & Pick<Calendar, 'id'>): Calendar {
@@ -57,7 +58,7 @@ describe('deviceCalendarPrefs', () => {
   })
 
   it('toggle y default solo mutan prefs', () => {
-    let prefs = { defaultCalendarId: 'a', hiddenIds: [] as string[] }
+    let prefs: DeviceCalendarPrefs = { defaultCalendarId: 'a', hiddenIds: [] }
     prefs = toggleHiddenInPrefs(prefs, 'a')
     expect(prefs.hiddenIds).toEqual(['a'])
     prefs = toggleHiddenInPrefs(prefs, 'a')

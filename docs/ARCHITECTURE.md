@@ -93,7 +93,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 - Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir).
 - En **navegador** (no Tauri): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
 - **Prefs por dispositivo** (`localStorage` `calendario.device.calendars.v1.<userId>`): calendario predeterminado + visibilidad de “Mis calendarios”. No se sincronizan entre PCs; al crear un evento se usa el predeterminado de *este* dispositivo.
-- **Gestionar calendarios**: modal para crear, renombrar, color, eliminar y restaurar. Al eliminar: descarga obligatoria de respaldo JSON (`calendarBackup`) y opción de mover eventos a otro calendario o borrarlos (recuperables vía restaurar).
+- **Gestionar calendarios**: modal para crear, renombrar, color, eliminar y restaurar. Al eliminar: descarga obligatoria de respaldo JSON (`calendarBackup`) y opción de mover eventos a otro calendario o borrarlos (recuperables vía restaurar). Import con topes DoS (5 MB / 5000 eventos·excepciones / 10000 task runs).
 - Semana laboral: modal para calendario laboral, días L–D, horario (default L–V 08:00–17:00) y “No molestar fuera del horario laboral”.
 - Updater desktop vía GitHub Releases (`release.yml`).
 
@@ -101,7 +101,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline: **v1.1.2**.
+- Baseline: **v1.1.3**.
 
 ## Deploy web
 

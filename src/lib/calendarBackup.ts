@@ -14,6 +14,13 @@ import type { CalendarSnapshot } from './repositories/types'
 
 export const CALENDAR_BACKUP_VERSION = 1 as const
 
+/** Tope de tamaño del archivo JSON de respaldo (antes de leer/parsear). */
+export const MAX_BACKUP_FILE_BYTES = 5 * 1024 * 1024
+
+export const MAX_BACKUP_EVENTS = 5000
+export const MAX_BACKUP_EXCEPTIONS = 5000
+export const MAX_BACKUP_TASK_RUNS = 10_000
+
 export type CalendarBackup = {
   version: typeof CALENDAR_BACKUP_VERSION
   exportedAt: string
@@ -21,6 +28,19 @@ export type CalendarBackup = {
   events: CalendarEvent[]
   exceptions: EventException[]
   taskRuns: TaskRun[]
+}
+
+export function assertBackupFileWithinLimit(file: { size: number; name?: string }): void {
+  if (!Number.isFinite(file.size) || file.size < 0) {
+    throw new Error('Archivo de respaldo inválido')
+  }
+  if (file.size === 0) {
+    throw new Error('El archivo de respaldo está vacío')
+  }
+  if (file.size > MAX_BACKUP_FILE_BYTES) {
+    const mb = Math.round(MAX_BACKUP_FILE_BYTES / (1024 * 1024))
+    throw new Error(`El respaldo supera el máximo de ${mb} MB`)
+  }
 }
 
 export function buildCalendarBackup(state: CalendarSnapshot, calendarId: string): CalendarBackup {
@@ -184,7 +204,15 @@ export function parseCalendarBackup(raw: unknown, userId: string): CalendarBacku
   const exceptionsRaw = Array.isArray(obj.exceptions) ? obj.exceptions : []
   const taskRunsRaw = Array.isArray(obj.taskRuns) ? obj.taskRuns : []
 
-  if (eventsRaw.length > 5000) throw new Error('El respaldo tiene demasiados eventos')
+  if (eventsRaw.length > MAX_BACKUP_EVENTS) {
+    throw new Error(`El respaldo tiene demasiados eventos (máx. ${MAX_BACKUP_EVENTS})`)
+  }
+  if (exceptionsRaw.length > MAX_BACKUP_EXCEPTIONS) {
+    throw new Error(`El respaldo tiene demasiadas excepciones (máx. ${MAX_BACKUP_EXCEPTIONS})`)
+  }
+  if (taskRunsRaw.length > MAX_BACKUP_TASK_RUNS) {
+    throw new Error(`El respaldo tiene demasiado historial de tareas (máx. ${MAX_BACKUP_TASK_RUNS})`)
+  }
 
   return {
     version: CALENDAR_BACKUP_VERSION,
