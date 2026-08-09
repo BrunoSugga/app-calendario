@@ -120,6 +120,117 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
       return load()
     },
 
+    async updateCalendar(_state, id, patch) {
+      const row: { name?: string; color?: string } = {}
+      if (patch.name !== undefined) row.name = sanitizeCalendarName(patch.name)
+      if (patch.color !== undefined) row.color = sanitizeColor(patch.color)
+      if (Object.keys(row).length === 0) return load()
+      const { error } = await client.from('calendars').update(row).eq('id', id)
+      if (error) throw error
+      return load()
+    },
+
+    async deleteCalendar(state, id, _userId, options) {
+      if (state.calendars.length <= 1) {
+        throw new Error('No se puede eliminar el único calendario')
+      }
+      if (!state.calendars.some((c) => c.id === id)) {
+        throw new Error('Calendario no encontrado')
+      }
+      const moveTo = options?.moveToCalendarId
+      if (moveTo) {
+        if (moveTo === id) throw new Error('El calendario destino no puede ser el mismo')
+        if (!state.calendars.some((c) => c.id === moveTo)) {
+          throw new Error('Calendario destino no encontrado')
+        }
+        const { error: moveErr } = await client
+          .from('events')
+          .update({ calendar_id: moveTo })
+          .eq('calendar_id', id)
+        if (moveErr) throw moveErr
+      }
+      const { error } = await client.from('calendars').delete().eq('id', id)
+      if (error) throw error
+      return load()
+    },
+
+    async importCalendarBackup(_state, userId, payload) {
+      const { error: calErr } = await client.from('calendars').insert({
+        id: payload.calendar.id,
+        user_id: userId,
+        name: sanitizeCalendarName(payload.calendar.name),
+        color: sanitizeColor(payload.calendar.color),
+        is_default: false,
+        visible: true,
+        created_at: payload.calendar.created_at,
+      })
+      if (calErr) throw calErr
+
+      if (payload.events.length > 0) {
+        const { error: evErr } = await client.from('events').insert(
+          payload.events.map((e) => ({
+            id: e.id,
+            user_id: userId,
+            calendar_id: payload.calendar.id,
+            title: e.title,
+            description: e.description,
+            starts_at: e.starts_at,
+            ends_at: e.ends_at,
+            all_day: e.all_day,
+            reminder_minutes: e.reminder_minutes,
+            rrule: e.rrule,
+            kind: e.kind,
+            task_status: e.task_status,
+            task_started_at: e.task_started_at,
+            task_completed_at: e.task_completed_at,
+            task_duration_ms: e.task_duration_ms,
+            task_note: e.task_note,
+            created_at: e.created_at,
+            updated_at: e.updated_at,
+          })),
+        )
+        if (evErr) throw evErr
+      }
+
+      if (payload.exceptions.length > 0) {
+        const { error: exErr } = await client.from('event_exceptions').insert(
+          payload.exceptions.map((ex) => ({
+            id: ex.id,
+            event_id: ex.event_id,
+            user_id: userId,
+            original_starts_at: ex.original_starts_at,
+            is_cancelled: ex.is_cancelled,
+            title: ex.title,
+            description: ex.description,
+            starts_at: ex.starts_at,
+            ends_at: ex.ends_at,
+            all_day: ex.all_day,
+            reminder_minutes: ex.reminder_minutes,
+            created_at: ex.created_at,
+          })),
+        )
+        if (exErr) throw exErr
+      }
+
+      if (payload.taskRuns.length > 0) {
+        const { error: runErr } = await client.from('task_runs').insert(
+          payload.taskRuns.map((r) => ({
+            id: r.id,
+            event_id: r.event_id,
+            user_id: userId,
+            started_at: r.started_at,
+            completed_at: r.completed_at,
+            duration_ms: r.duration_ms,
+            note: r.note,
+            created_at: r.created_at,
+          })),
+        )
+        if (runErr && !isMissingRelationError(runErr)) throw runErr
+      }
+
+      return load()
+    },
+
     async saveEvent(state, userId, draft: EventDraft) {
       draft = sanitizeEventDraft(draft)
       if (draft.id && draft.editScope === 'single' && draft.occurrenceOriginalStartsAt) {
