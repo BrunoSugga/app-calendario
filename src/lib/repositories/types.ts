@@ -13,6 +13,13 @@ export type CalendarSnapshot = {
   taskRuns: TaskRun[]
 }
 
+export type CalendarBackupImportPayload = {
+  calendar: Calendar
+  events: CalendarEvent[]
+  exceptions: EventException[]
+  taskRuns: TaskRun[]
+}
+
 export type CalendarRepository = {
   load: () => Promise<CalendarSnapshot>
   toggleCalendarVisible: (state: CalendarSnapshot, id: string) => Promise<CalendarSnapshot>
@@ -26,6 +33,22 @@ export type CalendarRepository = {
     userId: string,
     name: string,
     color: string,
+  ) => Promise<CalendarSnapshot>
+  updateCalendar: (
+    state: CalendarSnapshot,
+    id: string,
+    patch: { name?: string; color?: string },
+  ) => Promise<CalendarSnapshot>
+  deleteCalendar: (
+    state: CalendarSnapshot,
+    id: string,
+    userId: string,
+    options?: { moveToCalendarId?: string },
+  ) => Promise<CalendarSnapshot>
+  importCalendarBackup: (
+    state: CalendarSnapshot,
+    userId: string,
+    payload: CalendarBackupImportPayload,
   ) => Promise<CalendarSnapshot>
   saveEvent: (
     state: CalendarSnapshot,

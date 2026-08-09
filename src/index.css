@@ -239,6 +239,77 @@ textarea:focus {
   margin-top: 0.5rem;
 }
 
+.manage-calendars-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+}
+
+.manage-calendars-modal h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.95rem;
+  color: var(--celeste-soft);
+}
+
+.manage-cal-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.manage-cal-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.manage-cal-name {
+  min-width: 0;
+}
+
+.manage-cal-create-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.manage-cal-delete {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.manage-cal-delete h3 {
+  margin-top: 0;
+}
+
+.manage-cal-delete-steps {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.manage-cal-delete-steps li {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ok-hint {
+  color: #6fcf97;
+  font-size: 0.85rem;
+}
+
+.manage-cal-restore {
+  margin-top: 0.5rem;
+}
+
 .work-week-modal fieldset.work-days {
   border: none;
   margin: 0;
@@ -398,6 +469,21 @@ textarea:focus {
 
 .sidebar-user span {
   color: var(--muted);
+}
+
+.sidebar-download {
+  display: block;
+  margin: 0;
+  padding: 0.45rem 0.7rem 0.65rem;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.82rem;
+  color: var(--celeste-soft, #9ec9f5);
+  text-decoration: none;
+}
+
+.sidebar-download:hover {
+  color: var(--celeste, #3d9be0);
+  text-decoration: underline;
 }
 
 .mini-cal-stack {

@@ -9,8 +9,12 @@ import { getAutostartEnabled, setAutostartEnabled } from '../../lib/autostart'
 import { isTauri } from '../../lib/tauri'
 import type { Occurrence } from '../../types'
 import { InviteUserModal } from '../Auth/InviteUserModal'
+import { ManageCalendarsModal } from './ManageCalendarsModal'
 import { MiniCalendar } from './MiniCalendar'
 import { WorkWeekModal } from './WorkWeekModal'
+
+const DESKTOP_DOWNLOAD_URL =
+  'https://github.com/BrunoSugga/app-calendario/releases/latest'
 
 type Props = {
   selectedDate: Date
@@ -45,14 +49,13 @@ export function Sidebar({
     exceptions,
     toggleCalendarVisible,
     setDefaultCalendar,
-    createCalendar,
   } = useCalendarData()
   const [monthAnchor, setMonthAnchor] = useState(startOfDay(selectedDate))
-  const [newName, setNewName] = useState('')
   const [autostart, setAutostart] = useState(false)
   const [autostartMsg, setAutostartMsg] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [workWeekOpen, setWorkWeekOpen] = useState(false)
+  const [manageCalsOpen, setManageCalsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
   const desktop = isTauri()
@@ -117,6 +120,17 @@ export function Sidebar({
                 role="menuitem"
                 onClick={() => {
                   setSettingsOpen(false)
+                  setManageCalsOpen(true)
+                }}
+              >
+                Gestionar calendarios
+              </button>
+              <button
+                type="button"
+                className="sidebar-settings-item"
+                role="menuitem"
+                onClick={() => {
+                  setSettingsOpen(false)
                   setWorkWeekOpen(true)
                 }}
               >
@@ -154,9 +168,20 @@ export function Sidebar({
         <strong>{user?.displayName}</strong>
         <span>{isCloud ? (isAdmin ? 'Admin · Sync nube' : 'Sync nube') : 'Modo local'}</span>
       </div>
+      {!desktop && (
+        <a
+          className="sidebar-download"
+          href={DESKTOP_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Descargar app para PC
+        </a>
+      )}
 
       <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
       <WorkWeekModal open={workWeekOpen} onClose={() => setWorkWeekOpen(false)} />
+      <ManageCalendarsModal open={manageCalsOpen} onClose={() => setManageCalsOpen(false)} />
 
       <div className="mini-cal-stack">
         <MiniCalendar
@@ -200,25 +225,7 @@ export function Sidebar({
             ))}
           </select>
         </label>
-
-        <div className="new-cal-row">
-          <input
-            placeholder="Nuevo calendario"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              if (!newName.trim()) return
-              void createCalendar(newName.trim(), '#3D9BE0')
-              setNewName('')
-            }}
-          >
-            +
-          </button>
-        </div>
+        <p className="hint tiny">Solo en este dispositivo. Usado al crear eventos nuevos.</p>
 
         <label className="checkbox filter-check">
           <input

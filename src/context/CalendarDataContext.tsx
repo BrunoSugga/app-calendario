@@ -20,6 +20,16 @@ import {
   createWorkWeekSettingsRepository,
   type WorkWeekSettingsRepository,
 } from '../lib/repositories/workWeekSettings'
+import {
+  applyDevicePrefs,
+  pruneDevicePrefsAfterDelete,
+  resolveDevicePrefs,
+  saveDevicePrefs,
+  setDefaultInPrefs,
+  toggleHiddenInPrefs,
+} from '../lib/deviceCalendarPrefs'
+import type { CalendarBackup } from '../lib/calendarBackup'
+import { parseCalendarBackup, remapBackupForImport } from '../lib/calendarBackup'
 
 type CalendarDataContextValue = {
   calendars: Calendar[]
@@ -33,6 +43,9 @@ type CalendarDataContextValue = {
   toggleCalendarVisible: (id: string) => Promise<void>
   setDefaultCalendar: (id: string) => Promise<void>
   createCalendar: (name: string, color: string) => Promise<void>
+  updateCalendar: (id: string, patch: { name?: string; color?: string }) => Promise<void>
+  deleteCalendar: (id: string, options?: { moveToCalendarId?: string }) => Promise<void>
+  importCalendarBackup: (backup: CalendarBackup) => Promise<void>
   saveEvent: (draft: EventDraft) => Promise<void>
   deleteEvent: (eventId: string, scope: 'single' | 'series', originalStartsAt?: string) => Promise<void>
   startTask: (eventId: string) => Promise<void>
@@ -48,8 +61,14 @@ function applySnapshot(
   setEvents: (v: CalendarEvent[]) => void,
   setExceptions: (v: EventException[]) => void,
   setTaskRuns: (v: TaskRun[]) => void,
+  userId: string | undefined,
 ) {
-  setCalendars(snapshot.calendars)
+  if (userId) {
+    const prefs = resolveDevicePrefs(userId, snapshot.calendars)
+    setCalendars(applyDevicePrefs(snapshot.calendars, prefs))
+  } else {
+    setCalendars(snapshot.calendars)
+  }
   setEvents(snapshot.events)
   setExceptions(snapshot.exceptions)
   setTaskRuns(snapshot.taskRuns)
@@ -71,14 +90,9 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const snapshot = useMemo(
-    (): CalendarSnapshot => ({ calendars, events, exceptions, taskRuns }),
-    [calendars, events, exceptions, taskRuns],
-  )
-
   const refresh = useCallback(async () => {
     if (!user) {
-      applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions, setTaskRuns)
+      applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions, setTaskRuns, undefined)
       setWorkWeek({ ...DEFAULT_WORK_WEEK })
       return
     }
@@ -87,7 +101,7 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const [next, nextWorkWeek] = await Promise.all([repo.load(), workWeekRepo.load()])
-      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
+      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns, user.id)
       // Si el calendario laboral ya no existe, no lo referenciamos en UI
       if (
         nextWorkWeek.workCalendarId &&
@@ -130,25 +144,39 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
   const runMutation = useCallback(
     async (mutate: (state: CalendarSnapshot) => Promise<CalendarSnapshot>) => {
       if (!user) return
-      const next = await mutate(snapshot)
-      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns)
+      // Pasar snapshot sin overlay de prefs: los campos is_default/visible en estado
+      // ya están mergeados; las mutaciones de calendarios (nombre/borrar) no dependen de ellos.
+      const next = await mutate({
+        calendars,
+        events,
+        exceptions,
+        taskRuns,
+      })
+      applySnapshot(next, setCalendars, setEvents, setExceptions, setTaskRuns, user.id)
     },
-    [user, snapshot],
+    [user, calendars, events, exceptions, taskRuns],
   )
 
   const toggleCalendarVisible = useCallback(
     async (id: string) => {
-      await runMutation((state) => repo.toggleCalendarVisible(state, id))
+      if (!user) return
+      const prefs = resolveDevicePrefs(user.id, calendars)
+      const nextPrefs = toggleHiddenInPrefs(prefs, id)
+      saveDevicePrefs(user.id, nextPrefs)
+      setCalendars(applyDevicePrefs(calendars, nextPrefs))
     },
-    [repo, runMutation],
+    [user, calendars],
   )
 
   const setDefaultCalendar = useCallback(
     async (id: string) => {
       if (!user) return
-      await runMutation((state) => repo.setDefaultCalendar(state, id, user.id))
+      const prefs = resolveDevicePrefs(user.id, calendars)
+      const nextPrefs = setDefaultInPrefs(prefs, id)
+      saveDevicePrefs(user.id, nextPrefs)
+      setCalendars(applyDevicePrefs(calendars, nextPrefs))
     },
-    [repo, runMutation, user],
+    [user, calendars],
   )
 
   const createCalendar = useCallback(
@@ -157,6 +185,46 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       await runMutation((state) => repo.createCalendar(state, user.id, name, color))
     },
     [repo, runMutation, user],
+  )
+
+  const updateCalendar = useCallback(
+    async (id: string, patch: { name?: string; color?: string }) => {
+      if (!user) return
+      await runMutation((state) => repo.updateCalendar(state, id, patch))
+    },
+    [repo, runMutation, user],
+  )
+
+  const deleteCalendar = useCallback(
+    async (id: string, options?: { moveToCalendarId?: string }) => {
+      if (!user) return
+      const prefsBefore = resolveDevicePrefs(user.id, calendars)
+      const remainingIds = calendars.filter((c) => c.id !== id).map((c) => c.id)
+      saveDevicePrefs(user.id, pruneDevicePrefsAfterDelete(prefsBefore, id, remainingIds))
+
+      if (workWeek.workCalendarId === id) {
+        const nextWw = { ...workWeek, workCalendarId: null }
+        setWorkWeek(nextWw)
+        try {
+          await workWeekRepo.save(nextWw)
+        } catch {
+          /* refresh posterior corrige */
+        }
+      }
+
+      await runMutation((state) => repo.deleteCalendar(state, id, user.id, options))
+    },
+    [user, calendars, repo, runMutation, workWeek, workWeekRepo],
+  )
+
+  const importCalendarBackupFn = useCallback(
+    async (backup: CalendarBackup) => {
+      if (!user) return
+      const parsed = parseCalendarBackup(backup, user.id)
+      const payload = remapBackupForImport(parsed, user.id)
+      await runMutation((state) => repo.importCalendarBackup(state, user.id, payload))
+    },
+    [user, repo, runMutation],
   )
 
   const saveEvent = useCallback(
@@ -215,6 +283,9 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       toggleCalendarVisible,
       setDefaultCalendar,
       createCalendar,
+      updateCalendar,
+      deleteCalendar,
+      importCalendarBackup: importCalendarBackupFn,
       saveEvent,
       deleteEvent,
       startTask,
@@ -233,6 +304,9 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
       toggleCalendarVisible,
       setDefaultCalendar,
       createCalendar,
+      updateCalendar,
+      deleteCalendar,
+      importCalendarBackupFn,
       saveEvent,
       deleteEvent,
       startTask,

@@ -103,6 +103,68 @@ export function createLocalCalendarRepository(): CalendarRepository {
       })
     },
 
+    async updateCalendar(state, id, patch) {
+      const calendar = state.calendars.find((c) => c.id === id)
+      if (!calendar) return state
+      const name = patch.name !== undefined ? sanitizeCalendarName(patch.name) : calendar.name
+      const color = patch.color !== undefined ? sanitizeColor(patch.color) : calendar.color
+      return writeSnapshot({
+        ...state,
+        calendars: state.calendars.map((c) => (c.id === id ? { ...c, name, color } : c)),
+      })
+    },
+
+    async deleteCalendar(state, id, _userId, options) {
+      if (state.calendars.length <= 1) {
+        throw new Error('No se puede eliminar el único calendario')
+      }
+      if (!state.calendars.some((c) => c.id === id)) {
+        throw new Error('Calendario no encontrado')
+      }
+      const moveTo = options?.moveToCalendarId
+      if (moveTo) {
+        if (moveTo === id) throw new Error('El calendario destino no puede ser el mismo')
+        if (!state.calendars.some((c) => c.id === moveTo)) {
+          throw new Error('Calendario destino no encontrado')
+        }
+        return writeSnapshot({
+          ...state,
+          calendars: state.calendars.filter((c) => c.id !== id),
+          events: state.events.map((e) =>
+            e.calendar_id === id ? { ...e, calendar_id: moveTo } : e,
+          ),
+        })
+      }
+
+      const eventIds = new Set(state.events.filter((e) => e.calendar_id === id).map((e) => e.id))
+      return writeSnapshot({
+        ...state,
+        calendars: state.calendars.filter((c) => c.id !== id),
+        events: state.events.filter((e) => e.calendar_id !== id),
+        exceptions: state.exceptions.filter((ex) => !eventIds.has(ex.event_id)),
+        taskRuns: state.taskRuns.filter((r) => !eventIds.has(r.event_id)),
+      })
+    },
+
+    async importCalendarBackup(state, userId, payload) {
+      if (payload.calendar.user_id !== userId) {
+        payload = {
+          ...payload,
+          calendar: { ...payload.calendar, user_id: userId },
+          events: payload.events.map((e) => ({ ...e, user_id: userId })),
+          exceptions: payload.exceptions.map((ex) => ({ ...ex, user_id: userId })),
+          taskRuns: payload.taskRuns.map((r) => ({ ...r, user_id: userId })),
+        }
+      }
+      return writeSnapshot({
+        ...state,
+        calendars: [...state.calendars, payload.calendar],
+        events: [...state.events, ...payload.events],
+        exceptions: [...state.exceptions, ...payload.exceptions],
+        taskRuns: [...payload.taskRuns, ...state.taskRuns],
+      })
+    },
+
     async saveEvent(state, userId, draft: EventDraft) {
       draft = sanitizeEventDraft(draft)
       const now = new Date().toISOString()

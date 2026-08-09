@@ -47,7 +47,7 @@ Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
 - **Custom domain:** Active en Cloudflare Pages.
 - **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost).
-- **Invites:** cualquier email; desde Tauri el redirect usa `VITE_PUBLIC_APP_URL` / `calendario.bmatrix.org` (no `tauri.localhost`). UI: rueda de ajustes en sidebar → Invitar / Salir.
+- **Invites:** cualquier email; desde Tauri el redirect usa `VITE_PUBLIC_APP_URL` / `calendario.bmatrix.org` (no `tauri.localhost`). UI: rueda de ajustes en sidebar → Gestionar calendarios / Invitar / Salir.
 - **Avisos:** steppers (flechas + doble clic lista), botones Descartar → Reagendar → Abrir; lookback 5 min en scan (`domain/reminders.ts`). Popups requeridos en web.
 - **Rate limit mails Supabase (free):** `email rate limit exceeded` → esperar ~30–60 min.
 - **Borrar usuarios:** solo Dashboard Supabase → Authentication → Users.
