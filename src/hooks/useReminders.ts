@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
 import {
+  partitionMissedReminders,
   reminderFireKey,
   reminderScanRangeWithWorkWeek,
-  selectDueReminders,
 } from '../domain/reminders'
 import {
   consumeQueuedOpenEvent,
@@ -17,8 +17,20 @@ import {
 import { isSafeId, isSafeIsoDate } from '../lib/security'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useAuth } from '../context/AuthContext'
+import type { EventKind, Occurrence } from '../types'
 
 const FIRED_KEY = 'calendario.reminders.fired'
+const LAST_SCAN_KEY = 'calendario.reminders.lastScan'
+
+export type MissedReminderRow = {
+  eventId: string
+  originalStartsAt: string
+  startsAt: string
+  title: string
+  calendarName: string
+  kind: EventKind
+  fireKey: string
+}
 
 function loadFired(): Set<string> {
   try {
@@ -34,9 +46,36 @@ function saveFired(set: Set<string>): void {
   localStorage.setItem(FIRED_KEY, JSON.stringify(values))
 }
 
+function loadLastScan(): Date | null {
+  try {
+    const raw = localStorage.getItem(LAST_SCAN_KEY)
+    if (!raw) return null
+    const date = new Date(raw)
+    return Number.isNaN(date.getTime()) ? null : date
+  } catch {
+    return null
+  }
+}
+
+function saveLastScan(now: Date): void {
+  localStorage.setItem(LAST_SCAN_KEY, now.toISOString())
+}
+
 function snoozeActive(eventId: string): boolean {
   const until = Number(localStorage.getItem(`calendario.snooze.${eventId}`) ?? '0')
   return until > Date.now()
+}
+
+function toMissedRow(occ: Occurrence, calendarName: string): MissedReminderRow {
+  return {
+    eventId: occ.eventId,
+    originalStartsAt: formatISO(occ.originalStartsAt),
+    startsAt: formatISO(occ.startsAt),
+    title: occ.title,
+    calendarName,
+    kind: occ.kind,
+    fireKey: reminderFireKey(occ.eventId, occ.originalStartsAt),
+  }
 }
 
 type Options = {
@@ -45,12 +84,32 @@ type Options = {
   onReschedule?: (payload: RescheduleEventPayload) => void
 }
 
-export function useReminders(options: Options = {}): void {
+export function useReminders(options: Options = {}): {
+  missedReminders: MissedReminderRow[] | null
+  dismissMissedReminders: () => void
+} {
   const { user } = useAuth()
   const { events, calendars, exceptions, workWeek } = useCalendarData()
   const firedRef = useRef<Set<string>>(loadFired())
   const optionsRef = useRef(options)
   optionsRef.current = options
+  const [missedReminders, setMissedReminders] = useState<MissedReminderRow[] | null>(null)
+  const missedOpenRef = useRef(false)
+
+  function dismissMissedReminders() {
+    setMissedReminders((current) => {
+      if (current && current.length > 0) {
+        firedRef.current = loadFired()
+        for (const row of current) {
+          firedRef.current.add(row.fireKey)
+        }
+        saveFired(firedRef.current)
+      }
+      return null
+    })
+    missedOpenRef.current = false
+    saveLastScan(new Date())
+  }
 
   useEffect(() => {
     function handleOpen(payload: { eventId: string; startsAt: string }) {
@@ -144,7 +203,8 @@ export function useReminders(options: Options = {}): void {
     const tick = async () => {
       firedRef.current = loadFired()
       const now = new Date()
-      const range = reminderScanRangeWithWorkWeek(now, workWeek)
+      const lastScan = loadLastScan()
+      const range = reminderScanRangeWithWorkWeek(now, workWeek, undefined, undefined, lastScan)
       const occurrences = expandOccurrences(
         events,
         calendars,
@@ -152,9 +212,10 @@ export function useReminders(options: Options = {}): void {
         range.start,
         range.end,
       )
-      const due = selectDueReminders(occurrences, now, firedRef.current, {
+      const { due, ancient } = partitionMissedReminders(occurrences, now, firedRef.current, {
         snoozeActive,
         workWeek,
+        lastScan,
       })
 
       for (const occ of due) {
@@ -182,6 +243,21 @@ export function useReminders(options: Options = {}): void {
         firedRef.current.add(key)
         saveFired(firedRef.current)
       }
+
+      if (ancient.length > 0 && !missedOpenRef.current) {
+        missedOpenRef.current = true
+        setMissedReminders(
+          ancient.map((occ) => {
+            const calendar = calendars.find((c) => c.id === occ.calendarId)
+            return toMissedRow(occ, calendar?.name ?? 'Calendario')
+          }),
+        )
+      }
+
+      // No avanzar lastScan mientras haya antiguos pendientes de acusar recibo.
+      if (!missedOpenRef.current) {
+        saveLastScan(now)
+      }
     }
 
     void tick()
@@ -191,4 +267,6 @@ export function useReminders(options: Options = {}): void {
 
     return () => window.clearInterval(id)
   }, [user, events, calendars, exceptions, workWeek])
+
+  return { missedReminders, dismissMissedReminders }
 }

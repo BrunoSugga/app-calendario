@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { addMinutes } from 'date-fns'
+import { addDays, addMinutes } from 'date-fns'
 import type { Occurrence } from '../types'
 import {
+  isOccurrenceAncientMissed,
   isOccurrenceDueForReminder,
+  partitionMissedReminders,
   reminderFireKey,
   reminderScanRange,
   reminderScanRangeWithWorkWeek,
@@ -52,6 +54,91 @@ describe('reminderScanRange', () => {
     const range = reminderScanRangeWithWorkWeek(now, workMute)
     expect(range.start.getDate()).toBe(7) // viernes
     expect(range.start.getHours()).toBe(17)
+  })
+
+  it('con lastScan amplía el lookback del scan', () => {
+    const now = new Date('2026-08-20T10:00:00.000-03:00')
+    const lastScan = new Date('2026-07-20T10:00:00.000-03:00')
+    const range = reminderScanRangeWithWorkWeek(now, null, 5, 24, lastScan)
+    expect(range.start.getTime()).toBe(lastScan.getTime())
+  })
+})
+
+describe('catch-up al reabrir', () => {
+  it('aviso de hace horas con lastScan previo entra en due (popup)', () => {
+    const now = new Date('2026-08-20T18:00:00.000-03:00')
+    const startsAt = new Date('2026-08-20T10:00:00.000-03:00')
+    const lastScan = new Date('2026-08-19T18:00:00.000-03:00')
+    expect(
+      isOccurrenceDueForReminder(occ({ startsAt, endsAt: startsAt, reminderMinutes: 0 }), now, {
+        lastScan,
+      }),
+    ).toBe(true)
+  })
+
+  it('aviso de hace 20 días con lastScan 30 días atrás va a ancient, no a due', () => {
+    const now = new Date('2026-08-20T12:00:00.000-03:00')
+    const startsAt = addDays(now, -20)
+    const lastScan = addDays(now, -30)
+    const item = occ({
+      eventId: 'evt-old',
+      startsAt,
+      endsAt: startsAt,
+      originalStartsAt: startsAt,
+      reminderMinutes: 0,
+    })
+    expect(isOccurrenceDueForReminder(item, now, { lastScan })).toBe(false)
+    expect(isOccurrenceAncientMissed(item, now, { lastScan })).toBe(true)
+    const { due, ancient } = partitionMissedReminders([item], now, new Set(), { lastScan })
+    expect(due).toHaveLength(0)
+    expect(ancient.map((o) => o.eventId)).toEqual(['evt-old'])
+  })
+
+  it('sin lastScan no inventa catch-up ni ancient', () => {
+    const now = new Date('2026-08-20T12:00:00.000-03:00')
+    const startsAt = addDays(now, -3)
+    const item = occ({ startsAt, endsAt: startsAt, originalStartsAt: startsAt, reminderMinutes: 0 })
+    expect(isOccurrenceDueForReminder(item, now)).toBe(false)
+    expect(isOccurrenceAncientMissed(item, now)).toBe(false)
+    expect(partitionMissedReminders([item], now, new Set())).toEqual({ due: [], ancient: [] })
+  })
+
+  it('anterior a lastScan no aparece', () => {
+    const now = new Date('2026-08-20T12:00:00.000-03:00')
+    const lastScan = addDays(now, -10)
+    const startsAt = addDays(now, -12)
+    const item = occ({ startsAt, endsAt: startsAt, originalStartsAt: startsAt, reminderMinutes: 0 })
+    const parts = partitionMissedReminders([item], now, new Set(), { lastScan })
+    expect(parts).toEqual({ due: [], ancient: [] })
+  })
+
+  it('ya en fired no vuelve ni como due ni ancient', () => {
+    const now = new Date('2026-08-20T12:00:00.000-03:00')
+    const lastScan = addDays(now, -30)
+    const recentAt = addMinutes(now, -3 * 60)
+    const recent = occ({
+      eventId: 'evt-recent',
+      startsAt: recentAt,
+      endsAt: recentAt,
+      originalStartsAt: recentAt,
+      reminderMinutes: 0,
+    })
+    const ancientAt = addDays(now, -20)
+    const old = occ({
+      eventId: 'evt-ancient',
+      startsAt: ancientAt,
+      endsAt: ancientAt,
+      originalStartsAt: ancientAt,
+      reminderMinutes: 0,
+    })
+    const fired = new Set([
+      reminderFireKey(recent.eventId, recent.originalStartsAt),
+      reminderFireKey(old.eventId, old.originalStartsAt),
+    ])
+    expect(partitionMissedReminders([recent, old], now, fired, { lastScan })).toEqual({
+      due: [],
+      ancient: [],
+    })
   })
 })
 

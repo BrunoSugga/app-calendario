@@ -6,6 +6,7 @@ import { DayView } from '../components/Views/DayView'
 import { WeekView } from '../components/Views/WeekView'
 import { MonthView } from '../components/Views/MonthView'
 import { EventModal } from '../components/Event/EventModal'
+import { MissedRemindersModal } from '../components/Reminder/MissedRemindersModal'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useReminders } from '../hooks/useReminders'
 import { useAppUpdater } from '../hooks/useAppUpdater'
@@ -99,12 +100,14 @@ export function CalendarPage() {
     [calendars, events, exceptions, saveEvent],
   )
 
-  useReminders({
-    onOpenInCalendar: (payload) => {
-      setSelectedDate(startOfDay(new Date(payload.startsAt)))
-      setView('day')
-      setFocusEventId(payload.eventId)
-    },
+  const openInCalendar = useCallback((payload: { eventId: string; startsAt: string }) => {
+    setSelectedDate(startOfDay(new Date(payload.startsAt)))
+    setView('day')
+    setFocusEventId(payload.eventId)
+  }, [])
+
+  const { missedReminders, dismissMissedReminders } = useReminders({
+    onOpenInCalendar: openInCalendar,
     onStartTask: (eventId) => {
       void startTask(eventId)
     },
@@ -268,6 +271,12 @@ export function CalendarPage() {
               }
             : undefined
         }
+      />
+
+      <MissedRemindersModal
+        items={missedReminders}
+        onDismiss={dismissMissedReminders}
+        onOpen={openInCalendar}
       />
     </div>
   )

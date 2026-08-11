@@ -38,17 +38,17 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-09) — baseline **v1.1.3**
+## Estado actual (2026-08-11) — baseline **v1.1.4**
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- **Baseline:** desktop **v1.1.3** + web en `calendario.bmatrix.org` (mismo código en `main`). Prefs de calendario por dispositivo; Gestionar calendarios; CTA descarga PC en web; topes DoS en import de respaldos.
+- **Baseline:** desktop **v1.1.4** + web en `calendario.bmatrix.org` (mismo código en `main`). Catch-up de avisos al reabrir; prefs de calendario por dispositivo; Gestionar calendarios; CTA descarga PC en web; topes DoS en import.
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
 - **Custom domain:** Active en Cloudflare Pages.
 - **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost).
 - **Invites:** cualquier email; desde Tauri el redirect usa `VITE_PUBLIC_APP_URL` / `calendario.bmatrix.org` (no `tauri.localhost`). UI: rueda de ajustes en sidebar → Gestionar calendarios / Invitar / Salir.
-- **Avisos:** steppers (flechas + doble clic lista), botones Descartar → Reagendar → Abrir; lookback 5 min en scan (`domain/reminders.ts`). Popups requeridos en web.
+- **Avisos:** steppers (flechas + doble clic lista), botones Descartar → Reagendar → Abrir; catch-up al reabrir vía `lastScan` (popup ≤15 días, modal si más antiguos); gracia 5 min sin heartbeat. Popups requeridos en web.
 - **Rate limit mails Supabase (free):** `email rate limit exceeded` → esperar ~30–60 min.
 - **Borrar usuarios:** solo Dashboard Supabase → Authentication → Users.
 - **GitHub Pages:** apagado. Deploy web: Cloudflare Pages al push a `main`.

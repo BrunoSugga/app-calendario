@@ -73,10 +73,14 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 ## Avisos / recordatorios (web + desktop)
 
 - Motor: `useReminders` (poll ~15s) → `openReminderWindow` (`src/lib/tauri.ts`).
-- Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `reminderScanRangeWithWorkWeek`, `selectDueReminders`) + `src/domain/workWeek.ts` + tests.
+- Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `reminderScanRangeWithWorkWeek`, `partitionMissedReminders` / `selectDueReminders`) + `src/domain/workWeek.ts` + tests.
 - Escaneo: mira **gracia atrás** (5 min) + horizonte 24 h. Sin el lookback, un `kind=reminder` (`ends_at === starts_at`) desaparecía del expand apenas pasaba el segundo de inicio.
-- **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). Los demás calendarios usan la gracia de 5 min habitual.
-- `fired` en `localStorage` solo se marca **después** de abrir el aviso (si falla el webview/popup no se consume el disparo).
+- **Catch-up al reabrir:** heartbeat `calendario.reminders.lastScan` en `localStorage`. Al volver, avisos con `remindAt` desde `lastScan` y no en `fired`:
+  - **Últimos 15 días** → popup/webview individual (como en uso normal).
+  - **Más antiguos** (pero ≥ `lastScan`) → modal resumen `MissedRemindersModal` (tabla desplazable); “Entendido” marca esas keys en `fired`. Mientras el modal esté pendiente no se avanza `lastScan`.
+  - Primera vez sin `lastScan`: solo gracia de 5 min (no vuelca el histórico del calendario).
+- **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). No van al modal de antiguos; los demás calendarios usan gracia / catch-up habitual.
+- `fired` en `localStorage` (por dispositivo) solo se marca **después** de abrir el aviso o de acusar el modal de antiguos (si falla el webview/popup no se consume el disparo).
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
@@ -86,7 +90,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
-- Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
+- Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.reminders.lastScan` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
 
 ## UI principal
 
@@ -101,7 +105,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline: **v1.1.3**.
+- Baseline: **v1.1.4**.
 
 ## Deploy web
 

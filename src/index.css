@@ -239,6 +239,58 @@ textarea:focus {
   margin-top: 0.5rem;
 }
 
+.missed-reminders-modal {
+  width: min(720px, 100%);
+}
+
+.missed-reminders-intro {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.missed-reminders-table-wrap {
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.missed-reminders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.missed-reminders-table th,
+.missed-reminders-table td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+
+.missed-reminders-table th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.missed-reminders-table td:last-child,
+.missed-reminders-table th:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.missed-reminders-modal .modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+}
+
 .manage-calendars-modal {
   width: min(560px, 100%);
   max-height: min(90vh, 720px);
