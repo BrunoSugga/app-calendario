@@ -48,7 +48,7 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - [x] `calendario.bmatrix.org` **Active** en Cloudflare
 - [x] Site URL Supabase = `https://calendario.bmatrix.org` (confirmar en dashboard si un invite falla)
 - [x] Invite + set-password probado (navegador OK; escritorio desde v1.0.8+)
-- [x] Baseline: desktop **v1.1.4** (+ web canónica; catch-up avisos al reabrir; prefs por dispositivo / gestionar calendarios / topes import)
+- [x] Baseline: desktop **v1.1.5** (+ web canónica; fix catch-up avisos al reabrir; prefs por dispositivo / gestionar calendarios / topes import)
 - [ ] (Opcional) Cloudflare Access después
 - [ ] Rotar tokens si se pegaron en chats antiguos
 
@@ -56,6 +56,7 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 - Publicar: Actions → **Release desktop** con la versión alineada a `package.json` / `tauri.conf.json` / `Cargo.toml`.
 - La app instalada (1.0.1+) pregunta al abrir si hay release más nueva (`latest.json` del updater).
+- **v1.1.5** = fix catch-up al reabrir (no avanzar `lastScan` antes de cargar eventos).
 - **v1.1.4** = catch-up de avisos al reabrir (popup ≤15 días; modal resumen si más antiguos).
 - **v1.1.3** = topes DoS en import de respaldos JSON + fix build release (tipos en tests).
 - **v1.1.2** = prefs de calendario por dispositivo, gestionar calendarios (respaldo/mover), CTA descarga PC en web.

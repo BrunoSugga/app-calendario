@@ -5,6 +5,7 @@ import {
   partitionMissedReminders,
   reminderFireKey,
   reminderScanRangeWithWorkWeek,
+  shouldCommitReminderLastScan,
 } from '../domain/reminders'
 import {
   consumeQueuedOpenEvent,
@@ -89,7 +90,7 @@ export function useReminders(options: Options = {}): {
   dismissMissedReminders: () => void
 } {
   const { user } = useAuth()
-  const { events, calendars, exceptions, workWeek } = useCalendarData()
+  const { events, calendars, exceptions, workWeek, loading } = useCalendarData()
   const firedRef = useRef<Set<string>>(loadFired())
   const optionsRef = useRef(options)
   optionsRef.current = options
@@ -198,7 +199,9 @@ export function useReminders(options: Options = {}): {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    // Cruciale: no escanear ni avanzar lastScan hasta tener el snapshot cargado.
+    // Si no, al abrir la app el primer tick corre con events=[] y “quema” el catch-up.
+    if (!user || loading) return
 
     const tick = async () => {
       firedRef.current = loadFired()
@@ -218,6 +221,7 @@ export function useReminders(options: Options = {}): {
         lastScan,
       })
 
+      let openFailures = 0
       for (const occ of due) {
         const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
 
@@ -239,7 +243,10 @@ export function useReminders(options: Options = {}): {
         })
 
         // Solo marcar disparado si se mostró aviso (popup/alert/webview).
-        if (!opened) continue
+        if (!opened) {
+          openFailures += 1
+          continue
+        }
         firedRef.current.add(key)
         saveFired(firedRef.current)
       }
@@ -254,8 +261,13 @@ export function useReminders(options: Options = {}): {
         )
       }
 
-      // No avanzar lastScan mientras haya antiguos pendientes de acusar recibo.
-      if (!missedOpenRef.current) {
+      if (
+        shouldCommitReminderLastScan({
+          dataReady: true,
+          missedModalPending: missedOpenRef.current,
+          openFailures,
+        })
+      ) {
         saveLastScan(now)
       }
     }
@@ -266,7 +278,7 @@ export function useReminders(options: Options = {}): {
     }, 15000)
 
     return () => window.clearInterval(id)
-  }, [user, events, calendars, exceptions, workWeek])
+  }, [user, loading, events, calendars, exceptions, workWeek])
 
   return { missedReminders, dismissMissedReminders }
 }

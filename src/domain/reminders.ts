@@ -188,3 +188,12 @@ export function partitionMissedReminders(
   }
   return { due, ancient }
 }
+
+/** Heartbeat lastScan: solo tras un escaneo con datos listos y sin disparos pendientes de mostrar. */
+export function shouldCommitReminderLastScan(options: {
+  dataReady: boolean
+  missedModalPending: boolean
+  openFailures: number
+}): boolean {
+  return options.dataReady && !options.missedModalPending && options.openFailures === 0
+}

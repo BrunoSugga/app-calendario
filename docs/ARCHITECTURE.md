@@ -79,6 +79,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **Últimos 15 días** → popup/webview individual (como en uso normal).
   - **Más antiguos** (pero ≥ `lastScan`) → modal resumen `MissedRemindersModal` (tabla desplazable); “Entendido” marca esas keys en `fired`. Mientras el modal esté pendiente no se avanza `lastScan`.
   - Primera vez sin `lastScan`: solo gracia de 5 min (no vuelca el histórico del calendario).
+  - El poll **no corre ni avanza `lastScan` mientras `loading`** del snapshot (evita quemar el catch-up con `events=[]` al abrir). Tampoco avanza si falló abrir un aviso due.
 - **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). No van al modal de antiguos; los demás calendarios usan gracia / catch-up habitual.
 - `fired` en `localStorage` (por dispositivo) solo se marca **después** de abrir el aviso o de acusar el modal de antiguos (si falla el webview/popup no se consume el disparo).
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
@@ -105,7 +106,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline: **v1.1.4**.
+- Baseline: **v1.1.5**.
 
 ## Deploy web
 

@@ -81,7 +81,8 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
   const [exceptions, setExceptions] = useState<EventException[]>([])
   const [taskRuns, setTaskRuns] = useState<TaskRun[]>([])
   const [workWeek, setWorkWeek] = useState<WorkWeekSettings>({ ...DEFAULT_WORK_WEEK })
-  const [loading, setLoading] = useState(false)
+  // true hasta el primer refresh: evita que useReminders avance lastScan con events=[]
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const repo: CalendarRepository = useMemo(() => createCalendarRepository(), [])
@@ -94,6 +95,7 @@ export function CalendarDataProvider({ children }: { children: ReactNode }) {
     if (!user) {
       applySnapshot(emptySnapshot(), setCalendars, setEvents, setExceptions, setTaskRuns, undefined)
       setWorkWeek({ ...DEFAULT_WORK_WEEK })
+      setLoading(false)
       return
     }
 

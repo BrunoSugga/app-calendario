@@ -9,6 +9,7 @@ import {
   reminderScanRange,
   reminderScanRangeWithWorkWeek,
   selectDueReminders,
+  shouldCommitReminderLastScan,
 } from './reminders'
 import { DEFAULT_WORK_WEEK, type WorkWeekSettings } from './workWeek'
 
@@ -140,8 +141,36 @@ describe('catch-up al reabrir', () => {
       ancient: [],
     })
   })
+
+  it('si lastScan se adelanta a now (tick vacío) el catch-up se pierde', () => {
+    // Regresión: useReminders no debe saveLastScan antes de loading=false.
+    const now = new Date('2026-08-20T18:00:00.000-03:00')
+    const startsAt = new Date('2026-08-20T10:00:00.000-03:00')
+    const lastScanBeforeClose = new Date('2026-08-19T18:00:00.000-03:00')
+    const item = occ({ startsAt, endsAt: startsAt, originalStartsAt: startsAt, reminderMinutes: 0 })
+    expect(partitionMissedReminders([item], now, new Set(), { lastScan: lastScanBeforeClose }).due).toHaveLength(
+      1,
+    )
+    expect(partitionMissedReminders([item], now, new Set(), { lastScan: now }).due).toHaveLength(0)
+  })
 })
 
+describe('shouldCommitReminderLastScan', () => {
+  it('exige datos listos, sin modal pendiente y sin fallos al abrir', () => {
+    expect(
+      shouldCommitReminderLastScan({ dataReady: true, missedModalPending: false, openFailures: 0 }),
+    ).toBe(true)
+    expect(
+      shouldCommitReminderLastScan({ dataReady: false, missedModalPending: false, openFailures: 0 }),
+    ).toBe(false)
+    expect(
+      shouldCommitReminderLastScan({ dataReady: true, missedModalPending: true, openFailures: 0 }),
+    ).toBe(false)
+    expect(
+      shouldCommitReminderLastScan({ dataReady: true, missedModalPending: false, openFailures: 1 }),
+    ).toBe(false)
+  })
+})
 describe('isOccurrenceDueForReminder', () => {
   it('dispara al inicio (aviso 0) dentro de la gracia', () => {
     const startsAt = new Date('2026-08-08T13:17:00.000-03:00')
