@@ -9,6 +9,7 @@ type Props = {
   onNavigate: (delta: number) => void
   onToday: () => void
   onZoom: (delta: number) => void
+  onOpenSidebar?: () => void
 }
 
 export function Toolbar({
@@ -19,9 +20,20 @@ export function Toolbar({
   onNavigate,
   onToday,
   onZoom,
+  onOpenSidebar,
 }: Props) {
   return (
     <header className="toolbar">
+      {onOpenSidebar && (
+        <button
+          type="button"
+          className="btn icon toolbar-menu"
+          aria-label="Abrir menú"
+          onClick={onOpenSidebar}
+        >
+          ☰
+        </button>
+      )}
       <div className="view-tabs">
         {(['day', 'week', 'month'] as ViewMode[]).map((mode) => (
           <button

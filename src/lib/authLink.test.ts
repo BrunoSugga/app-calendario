@@ -32,12 +32,22 @@ describe('authLink security', () => {
     window.history.replaceState({}, '', '/')
   })
 
-  it('acepta redirects https y localhost http', () => {
+  it('acepta solo la allowlist de Auth (no cualquier https ni Capacitor)', () => {
     expect(isSafeAuthRedirect('https://calendario.bmatrix.org/?set-password=1')).toBe(true)
+    expect(isSafeAuthRedirect('https://bmx-calendario.pages.dev/?set-password=1')).toBe(true)
     expect(isSafeAuthRedirect('http://localhost:5173/?set-password=1')).toBe(true)
     expect(isSafeAuthRedirect('http://127.0.0.1:5173/')).toBe(true)
     expect(isSafeAuthRedirect('http://evil.example/')).toBe(false)
     expect(isSafeAuthRedirect('javascript:alert(1)')).toBe(false)
+    expect(isSafeAuthRedirect('https://localhost')).toBe(false)
+    expect(isSafeAuthRedirect('https://localhost/')).toBe(false)
+    expect(isSafeAuthRedirect('https://127.0.0.1/')).toBe(false)
+    expect(isSafeAuthRedirect('capacitor://localhost')).toBe(false)
+    expect(isSafeAuthRedirect('ionic://localhost')).toBe(false)
+    expect(isSafeAuthRedirect('http://tauri.localhost/?set-password=1')).toBe(false)
+    expect(isSafeAuthRedirect('https://evil.example/')).toBe(false)
+    expect(isSafeAuthRedirect('http://localhost/')).toBe(false)
+    expect(isSafeAuthRedirect('http://localhost:80/')).toBe(false)
   })
 
   it('resuelve redirect de auth evitando origen Tauri', async () => {
@@ -58,6 +68,33 @@ describe('authLink security', () => {
     expect(authAppBaseUrl()).toBe('https://calendario.bmatrix.org/')
     expect(authPasswordSetupRedirect()).toBe('https://calendario.bmatrix.org/?set-password=1')
     Object.defineProperty(window, 'location', { configurable: true, value: original })
+  })
+
+  it('resuelve redirect de auth evitando origen Capacitor https://localhost', async () => {
+    const { authAppBaseUrl, authPasswordSetupRedirect } = await import('./authLink')
+    const original = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...original,
+        origin: 'https://localhost',
+        hostname: 'localhost',
+        protocol: 'https:',
+        href: 'https://localhost/',
+      },
+    })
+    expect(isSafeAuthRedirect('https://localhost/?set-password=1')).toBe(false)
+    expect(authAppBaseUrl()).toBe('https://calendario.bmatrix.org/')
+    expect(authPasswordSetupRedirect()).toBe('https://calendario.bmatrix.org/?set-password=1')
+    expect(authPasswordSetupRedirect()).not.toMatch(/localhost(?!:5173)/)
+    Object.defineProperty(window, 'location', { configurable: true, value: original })
+  })
+
+  it('ignora VITE_PUBLIC_APP_URL fuera de la allowlist', async () => {
+    const { authAppBaseUrl } = await import('./authLink')
+    expect(authAppBaseUrl('https://localhost')).toBe('https://calendario.bmatrix.org/')
+    expect(authAppBaseUrl('https://phish.tld')).toBe('https://calendario.bmatrix.org/')
+    expect(authAppBaseUrl('https://calendario.bmatrix.org')).toBe('https://calendario.bmatrix.org/')
   })
 
   it('ignora ?set-password=1 sin marca y avisa enlace incompleto', async () => {

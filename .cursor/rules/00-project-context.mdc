@@ -16,7 +16,7 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 
 ## Inviolables
 
-- Nunca `service_role` ni secretos de admin en frontend/Tauri/`VITE_*`.
+- Nunca `service_role` ni secretos de admin en frontend/Tauri/Capacitor/`VITE_*`.
 - Invites y altas privilegiadas solo vía Edge Functions (`invite-user`).
 - Modo local ≠ seguridad multi-usuario.
 - Responder en español al usuario.
@@ -24,11 +24,11 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 
 ## Recordatorios operativos (2026-08)
 
-- **Baseline usuarios:** desktop **v1.1.5** (+ web `calendario.bmatrix.org`).
+- **Baseline usuarios:** desktop **v1.2.0** (+ web `calendario.bmatrix.org` + APK Capacitor).
 - Web canónica: `https://calendario.bmatrix.org`. Fallback: `bmx-calendario.pages.dev`.
 - Site URL Supabase = `https://calendario.bmatrix.org`.
-- Invites desde Tauri: redirect público (`VITE_PUBLIC_APP_URL`), no origin del webview.
-- Avisos: `docs/ARCHITECTURE.md` § Avisos; permitir popups en web; tests en `reminders.test.ts`.
+- Invites desde Tauri/APK: redirect público (`VITE_PUBLIC_APP_URL`), no origin del webview (`tauri.localhost` / `https://localhost`).
+- Avisos: `docs/ARCHITECTURE.md` § Avisos; permitir popups en web; nativos en Android; tests en `reminders.test.ts` y `nativeReminders.test.ts`.
 - `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
 - Probar invites en incógnito.
 - Sidebar: rueda de ajustes (Gestionar calendarios / Semana laboral / Invitar admin / Salir). Prefs de calendario por dispositivo.

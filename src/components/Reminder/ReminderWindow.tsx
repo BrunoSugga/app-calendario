@@ -10,6 +10,7 @@ import {
   notifyMainStartTask,
   type ReminderPayload,
 } from '../../lib/tauri'
+import { isCapacitor } from '../../lib/platform'
 import { isSafeId, isSafeReminderToken } from '../../lib/security'
 
 const SNOOZE_THRESHOLD_MINUTES = 12 * 60
@@ -38,8 +39,8 @@ const LONG_OPTIONS = [
 
 type DelayOption = { label: string; minutes: number }
 
-function loadReminder(): ReminderPayload | null {
-  const token = new URLSearchParams(window.location.search).get('t') ?? ''
+function loadReminder(tokenOverride?: string): ReminderPayload | null {
+  const token = tokenOverride ?? new URLSearchParams(window.location.search).get('t') ?? ''
   if (!isSafeReminderToken(token)) return null
   return consumeReminderPayload(token)
 }
@@ -184,8 +185,21 @@ function SnoozeStepper({
   )
 }
 
-export function ReminderWindow() {
-  const data = useMemo(() => loadReminder(), [])
+export function ReminderWindow({
+  token,
+  initial,
+  onDismiss,
+}: {
+  token?: string
+  initial?: Omit<ReminderPayload, 'exp'>
+  onDismiss?: () => void
+} = {}) {
+  const data = useMemo(() => {
+    if (initial) {
+      return { ...initial, exp: Date.now() + 5 * 60 * 1000 }
+    }
+    return loadReminder(token)
+  }, [token, initial])
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [shortIndex, setShortIndex] = useState(0)
@@ -200,6 +214,13 @@ export function ReminderWindow() {
   }, [data])
 
   async function closeWindow() {
+    if (onDismiss) {
+      onDismiss()
+      return
+    }
+    if (isCapacitor()) {
+      return
+    }
     if (!isTauri()) {
       window.close()
       return

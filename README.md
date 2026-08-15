@@ -4,6 +4,7 @@ Aplicación de calendario estilo Outlook con:
 
 - Web (Vite + React + TypeScript); avisos en ventana emergente (permitir popups)
 - Escritorio (Tauri) con ventanas de recordatorio siempre encima
+- Android (Capacitor): APK sideload; avisos locales nativos
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
@@ -26,6 +27,7 @@ Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
 
 - Node.js 20+ (CI usa Node 24)
 - Para escritorio: [Rust](https://rustup.rs/) y **Visual Studio Build Tools 2022** con workload “Desktop development with C++” (MSVC)
+- Para Android: [Android Studio](https://developer.android.com/studio) (SDK 36, min 26) + JDK 21
 - Proyecto [Supabase](https://supabase.com) (opcional para sync)
 
 ## Configuración Supabase
@@ -76,6 +78,7 @@ Si ves `email rate limit exceeded`, esperá 30–60 min (límite free de Supabas
 npm install
 npm run dev          # solo web
 npm run tauri:dev    # web + escritorio Tauri
+npm run cap:sync     # build web + sync a android/ e ios/
 ```
 
 ## Tests y calidad
@@ -95,6 +98,16 @@ npm run tauri:build
 
 El build de escritorio genera instaladores Windows (NSIS `.exe` y MSI) en `src-tauri/target/release/bundle/`.
 
+## Android (APK sideload)
+
+```bash
+npm run cap:sync
+npx cap run android          # debug en dispositivo/emulador
+npm run android:apk          # assembleRelease (hace falta keystore)
+```
+
+Detalle de firma, permisos y que los invites **no** usen `https://localhost`: [`docs/DEPLOY.md`](docs/DEPLOY.md). iOS queda como esqueleto (`ios/`); el IPA requiere Mac + cuenta Apple.
+
 ## Actualizaciones automáticas (escritorio)
 
 La app de escritorio usa el updater de Tauri + GitHub Releases.
@@ -113,4 +126,4 @@ La primera vez hay que instalar el `.exe` con updater (1.0.1+). Después se actu
 1. Entrar con correo (y contraseña si hay Supabase). En cloud no hay registro público: el admin invita.
 2. Crear eventos con clic en la rejilla horaria.
 3. Configurar repetición diaria/semanal/mensual.
-4. Recordatorios: en escritorio abren una ventana encima; en el navegador usan un popup (hay que permitir emergentes en el sitio). Aplazar ≤12 h solo silencia; más de 12 h o Reagendar mueve el evento y marca `REAGENDADO ·`.
+4. Recordatorios: en escritorio abren una ventana encima; en el navegador usan un popup (hay que permitir emergentes en el sitio); en Android se programan notificaciones locales. Aplazar ≤12 h solo silencia; más de 12 h o Reagendar mueve el evento y marca `REAGENDADO ·`.

@@ -7,6 +7,7 @@ import { WeekView } from '../components/Views/WeekView'
 import { MonthView } from '../components/Views/MonthView'
 import { EventModal } from '../components/Event/EventModal'
 import { MissedRemindersModal } from '../components/Reminder/MissedRemindersModal'
+import { ReminderWindow } from '../components/Reminder/ReminderWindow'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useReminders } from '../hooks/useReminders'
 import { useAppUpdater } from '../hooks/useAppUpdater'
@@ -16,7 +17,9 @@ import {
   clearReminderStateForEvent,
   withReagendadoPrefix,
 } from '../domain/reschedule'
-import type { RescheduleEventPayload } from '../lib/tauri'
+import type { RescheduleEventPayload, ReminderPayload } from '../lib/tauri'
+import { isCapacitor } from '../lib/platform'
+import { isSafeId, isSafeIsoDate } from '../lib/security'
 import type { EventDraft, Occurrence, ViewMode } from '../types'
 
 export function CalendarPage() {
@@ -41,6 +44,27 @@ export function CalendarPage() {
     (Partial<EventDraft> & { occurrence?: Occurrence; master?: (typeof events)[number] }) | undefined
   >()
   const [focusEventId, setFocusEventId] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [inAppReminder, setInAppReminder] = useState<Omit<ReminderPayload, 'exp'> | null>(null)
+  const [batteryHint, setBatteryHint] = useState(
+    () => isCapacitor() && localStorage.getItem('calendario.mobile.batteryHint') !== '1',
+  )
+
+  useEffect(() => {
+    function onShow(ev: Event) {
+      const detail = (ev as CustomEvent<{ payload?: Omit<ReminderPayload, 'exp'> }>).detail
+      if (
+        detail?.payload?.eventId &&
+        isSafeId(detail.payload.eventId) &&
+        isSafeIsoDate(detail.payload.startsAt) &&
+        isSafeIsoDate(detail.payload.originalStartsAt)
+      ) {
+        setInAppReminder(detail.payload)
+      }
+    }
+    window.addEventListener('calendario:show-reminder', onShow)
+    return () => window.removeEventListener('calendario:show-reminder', onShow)
+  }, [])
 
   const handleReschedule = useCallback(
     async (payload: RescheduleEventPayload) => {
@@ -196,12 +220,27 @@ export function CalendarPage() {
 
   return (
     <div className="app-shell">
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Cerrar menú"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       <Sidebar
         selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        onOpenOccurrence={openOccurrence}
+        onSelectDate={(date) => {
+          setSelectedDate(date)
+          setSidebarOpen(false)
+        }}
+        onOpenOccurrence={(occ) => {
+          openOccurrence(occ)
+          setSidebarOpen(false)
+        }}
         pendingTasksOnly={pendingTasksOnly}
         onPendingTasksOnlyChange={setPendingTasksOnly}
+        mobileOpen={sidebarOpen}
       />
       <main className="main-pane">
         <Toolbar
@@ -212,7 +251,24 @@ export function CalendarPage() {
           onNavigate={(delta) => setSelectedDate((d) => navigateView(d, view, delta))}
           onToday={() => setSelectedDate(startOfDay(new Date()))}
           onZoom={(delta) => setZoom((z) => Math.min(160, Math.max(70, z + delta * 10)))}
+          onOpenSidebar={() => setSidebarOpen(true)}
         />
+        {batteryHint && (
+          <div className="banner">
+            Si los avisos no suenan con la app cerrada, desactivá la optimización de batería para
+            BMatrix Calendario.{' '}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                localStorage.setItem('calendario.mobile.batteryHint', '1')
+                setBatteryHint(false)
+              }}
+            >
+              Entendido
+            </button>
+          </div>
+        )}
         {error && <div className="banner error">{error}</div>}
         {loading && <div className="banner">Cargando…</div>}
         <div className="view-container">
@@ -278,6 +334,12 @@ export function CalendarPage() {
         onDismiss={dismissMissedReminders}
         onOpen={openInCalendar}
       />
+
+      {inAppReminder && (
+        <div className="reminder-overlay" role="dialog" aria-modal="true" aria-label="Recordatorio">
+          <ReminderWindow initial={inAppReminder} onDismiss={() => setInAppReminder(null)} />
+        </div>
+      )}
     </div>
   )
 }

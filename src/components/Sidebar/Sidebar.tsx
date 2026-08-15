@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useCalendarData } from '../../context/CalendarDataContext'
 import { getAutostartEnabled, setAutostartEnabled } from '../../lib/autostart'
 import { isTauri } from '../../lib/tauri'
+import { isCapacitor } from '../../lib/platform'
 import type { Occurrence } from '../../types'
 import { InviteUserModal } from '../Auth/InviteUserModal'
 import { ManageCalendarsModal } from './ManageCalendarsModal'
@@ -22,6 +23,7 @@ type Props = {
   onOpenOccurrence: (occ: Occurrence) => void
   pendingTasksOnly: boolean
   onPendingTasksOnlyChange: (value: boolean) => void
+  mobileOpen?: boolean
 }
 
 function SettingsGearIcon() {
@@ -41,6 +43,7 @@ export function Sidebar({
   onOpenOccurrence,
   pendingTasksOnly,
   onPendingTasksOnlyChange,
+  mobileOpen = false,
 }: Props) {
   const { user, signOut, isCloud, isAdmin } = useAuth()
   const {
@@ -59,6 +62,7 @@ export function Sidebar({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
   const desktop = isTauri()
+  const native = desktop || isCapacitor()
 
   useEffect(() => {
     if (!desktop) return
@@ -96,7 +100,7 @@ export function Sidebar({
   const defaultId = calendars.find((c) => c.is_default)?.id ?? calendars[0]?.id ?? ''
 
   return (
-    <aside className="sidebar">
+    <aside className={mobileOpen ? 'sidebar sidebar-mobile-open' : 'sidebar'} id="calendario-sidebar">
       <div className="sidebar-brand">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
         <strong>BMatrix Calendario</strong>
@@ -168,7 +172,7 @@ export function Sidebar({
         <strong>{user?.displayName}</strong>
         <span>{isCloud ? (isAdmin ? 'Admin · Sync nube' : 'Sync nube') : 'Modo local'}</span>
       </div>
-      {!desktop && (
+      {!native && (
         <a
           className="sidebar-download"
           href={DESKTOP_DOWNLOAD_URL}

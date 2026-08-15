@@ -24,7 +24,7 @@ Actualizá los docs afectados en la misma PR/cambio:
 
 ## Alcance del producto
 
-- Calendario estilo Outlook: web (Vite + React + TS) + escritorio (Tauri).
+- Calendario estilo Outlook: web (Vite + React + TS) + escritorio (Tauri) + Android (Capacitor APK). iOS: esqueleto.
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime).
 - Modo local (`localStorage`) solo para desarrollo / uso sin backend; **no** es el modelo de seguridad para compañeros.
 
@@ -32,25 +32,26 @@ Actualizá los docs afectados en la misma PR/cambio:
 
 - Responder al usuario en **español**.
 - No commits ni push salvo pedido explícito.
-- No meter `service_role` ni secretos de admin en el frontend ni en Tauri.
+- No meter `service_role` ni secretos de admin en el frontend, Tauri ni Capacitor.
 - Preferir migraciones SQL numeradas en `supabase/migrations/`.
 - Operaciones privilegiadas (invitar usuarios, etc.) solo vía **Supabase Edge Functions** con `service_role` en el servidor.
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-12) — baseline **v1.1.5**
+## Estado actual (2026-08-14) — baseline **v1.2.0**
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- **Baseline:** desktop **v1.1.5** + web en `calendario.bmatrix.org` (mismo código en `main`). Fix catch-up de avisos al reabrir (no quemar `lastScan` antes de cargar datos); prefs de calendario por dispositivo; Gestionar calendarios; CTA descarga PC en web; topes DoS en import.
+- **Baseline:** desktop **v1.2.0** + web en `calendario.bmatrix.org` + APK Android (Capacitor sideload). iOS: esqueleto `ios/` (sin IPA).
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
 - **Custom domain:** Active en Cloudflare Pages.
-- **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost).
-- **Invites:** cualquier email; desde Tauri el redirect usa `VITE_PUBLIC_APP_URL` / `calendario.bmatrix.org` (no `tauri.localhost`). UI: rueda de ajustes en sidebar → Gestionar calendarios / Invitar / Salir.
-- **Avisos:** steppers (flechas + doble clic lista), botones Descartar → Reagendar → Abrir; catch-up al reabrir vía `lastScan` (popup ≤15 días, modal si más antiguos); gracia 5 min sin heartbeat. Popups requeridos en web.
+- **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost:5173). **No** `https://localhost` (Capacitor).
+- **Invites:** cualquier email; redirect allowlist (web pública). Desde Tauri/APK nunca el origin del WebView. UI: rueda de ajustes en sidebar → Gestionar calendarios / Invitar / Salir.
+- **Avisos:** steppers; Descartar → Reagendar → Abrir; catch-up al reabrir; en Android notificaciones locales (tope 100 / 48 h). Popups requeridos en web.
 - **Rate limit mails Supabase (free):** `email rate limit exceeded` → esperar ~30–60 min.
 - **Borrar usuarios:** solo Dashboard Supabase → Authentication → Users.
 - **GitHub Pages:** apagado. Deploy web: Cloudflare Pages al push a `main`.
 - **Desktop publish:** bump `package.json` + `tauri.conf.json` + `Cargo.toml`/`Cargo.lock` → Actions → **Release desktop**.
-- **Tests:** auth + security + `reminders.test.ts` (regresión alarmas duración 0).
+- **Android APK:** `npm run cap:sync` / `npm run android:apk`. Keystore fuera del repo.
+- **Tests:** auth + security + `reminders.test.ts` + `nativeReminders.test.ts` + `mobileConfig.security.test.ts`.

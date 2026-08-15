@@ -1,4 +1,5 @@
 import { createId } from './id'
+import { isCapacitor, isTauri } from './platform'
 import {
   clampText,
   isSafeId,
@@ -7,6 +8,8 @@ import {
 } from './security'
 import type { EventKind } from '../types'
 import { normalizeEventKind } from '../types'
+
+export { isTauri } from './platform'
 
 const REMINDER_PREFIX = 'calendario.reminder.payload.'
 const OPEN_EVENT_KEY = 'calendario.pending.open-event'
@@ -34,10 +37,6 @@ export type RescheduleEventPayload = {
   eventId: string
   originalStartsAt: string
   newStartsAt: string
-}
-
-export function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
 function sanitizeReminderFields(payload: {
@@ -256,7 +255,15 @@ export async function openReminderWindow(payload: {
     return false
   }
 
+  if (isCapacitor()) {
+    window.dispatchEvent(
+      new CustomEvent('calendario:show-reminder', { detail: { payload } }),
+    )
+    return true
+  }
+
   const token = storeReminderPayload(payload)
+
   const reminderQuery = `reminder=1&t=${encodeURIComponent(token)}`
 
   if (!isTauri()) {

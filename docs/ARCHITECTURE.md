@@ -6,6 +6,7 @@
 |------|------------|
 | Web UI | Vite 8 + React 19 + TypeScript |
 | Escritorio | Tauri 2 (Rust) |
+| Móvil | Capacitor 8 (Android APK; iOS esqueleto) |
 | Backend | Supabase (Auth, Postgres, Realtime) |
 | Auth cloud | Supabase Auth, flujo **PKCE** |
 | Persistencia local | `localStorage` (modo sin Supabase) |
@@ -40,6 +41,8 @@ src/
 supabase/migrations/   esquema + RLS (incl. 007 work_week_settings)
 supabase/functions/    Edge Functions (invite-user)
 src-tauri/             app escritorio + capabilities
+android/               proyecto nativo Capacitor (APK)
+ios/                   esqueleto Xcode (sin IPA en Windows)
 docs/                  contexto del proyecto (leer al inicio de sesión)
 ```
 
@@ -73,6 +76,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 ## Avisos / recordatorios (web + desktop)
 
 - Motor: `useReminders` (poll ~15s) → `openReminderWindow` (`src/lib/tauri.ts`).
+- En **Capacitor (Android)**: además se programan `LocalNotifications` nativas (~48 h, tope 100) vía `src/lib/nativeReminders.ts` + `nativeRemindersBridge.ts`. Tap o disparo en foreground abre `ReminderWindow` en overlay (no `window.open`). Texto visible: título + hora + calendario (sin descripción). Canal Android `visibility=PRIVATE`.
 - Lógica pura de disparo: `src/domain/reminders.ts` (`reminderScanRange`, `reminderScanRangeWithWorkWeek`, `partitionMissedReminders` / `selectDueReminders`) + `src/domain/workWeek.ts` + tests.
 - Escaneo: mira **gracia atrás** (5 min) + horizonte 24 h. Sin el lookback, un `kind=reminder` (`ends_at === starts_at`) desaparecía del expand apenas pasaba el segundo de inicio.
 - **Catch-up al reabrir:** heartbeat `calendario.reminders.lastScan` en `localStorage`. Al volver, avisos con `remindAt` desde `lastScan` y no en `fired`:
@@ -96,7 +100,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 ## UI principal
 
 - Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir).
-- En **navegador** (no Tauri): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
+- En **navegador** (no Tauri ni Capacitor): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
 - **Prefs por dispositivo** (`localStorage` `calendario.device.calendars.v1.<userId>`): calendario predeterminado + visibilidad de “Mis calendarios”. No se sincronizan entre PCs; al crear un evento se usa el predeterminado de *este* dispositivo.
 - **Gestionar calendarios**: modal para crear, renombrar, color, eliminar y restaurar. Al eliminar: descarga obligatoria de respaldo JSON (`calendarBackup`) y opción de mover eventos a otro calendario o borrarlos (recuperables vía restaurar). Import con topes DoS (5 MB / 5000 eventos·excepciones / 10000 task runs).
 - Semana laboral: modal para calendario laboral, días L–D, horario (default L–V 08:00–17:00) y “No molestar fuera del horario laboral”.
@@ -106,7 +110,15 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline: **v1.1.5**.
+- Baseline: **v1.2.0**.
+
+## Móvil (Capacitor)
+
+- Mismo `dist/` de Vite dentro de un WebView (`android/` + esqueleto `ios/`).
+- App ID: `com.bruno.calendario`. Origin Android: `https://localhost` (no usar como redirect de Auth).
+- Invites/recovery: siempre `https://calendario.bmatrix.org` (allowlist en `authLink.ts`).
+- UI: sidebar en drawer bajo 900 px; overlay de aviso in-app.
+- Tras reboot, abrir la app para reprogramar avisos si el OEM no restauró alarmas.
 
 ## Deploy web
 

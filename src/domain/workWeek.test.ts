@@ -6,6 +6,7 @@ import {
   minutesToTimeInput,
   normalizeWorkWeekSettings,
   previousWorkPeriodEnd,
+  nextWorkPeriodStart,
   timeInputToMinutes,
   type WorkWeekSettings,
 } from './workWeek'
@@ -56,6 +57,21 @@ describe('previousWorkPeriodEnd', () => {
     const end = previousWorkPeriodEnd(now, monFri)
     expect(end.getDate()).toBe(7)
     expect(end.getHours()).toBe(17)
+  })
+})
+
+describe('nextWorkPeriodStart', () => {
+  it('viernes de noche apunta al lunes 08:00', () => {
+    const start = nextWorkPeriodStart(new Date('2026-08-07T18:00:00'), monFri)
+    expect(start.getDay()).toBe(1)
+    expect(start.getHours()).toBe(8)
+    expect(start.getMinutes()).toBe(0)
+  })
+
+  it('antes de las 08:00 del lunes usa hoy 08:00', () => {
+    const start = nextWorkPeriodStart(new Date('2026-08-10T07:00:00'), monFri)
+    expect(start.getDate()).toBe(10)
+    expect(start.getHours()).toBe(8)
   })
 })
 

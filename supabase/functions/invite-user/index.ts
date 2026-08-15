@@ -23,13 +23,21 @@ function normalizeEmail(email: unknown): string | null {
   return next
 }
 
+/** Debe coincidir con src/lib/authRedirectAllowlist.ts (no cualquier https). */
+const AUTH_REDIRECT_HTTPS_HOSTS = new Set(['calendario.bmatrix.org', 'bmx-calendario.pages.dev'])
+const AUTH_REDIRECT_DEV_PORT = '5173'
+
 function isSafeRedirect(value: string): boolean {
   try {
     const parsed = new URL(value)
-    if (parsed.protocol === 'https:') return true
+    const host = parsed.hostname.toLowerCase()
+    if (parsed.protocol === 'https:') {
+      return AUTH_REDIRECT_HTTPS_HOSTS.has(host)
+    }
     if (
       parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+      (host === 'localhost' || host === '127.0.0.1') &&
+      parsed.port === AUTH_REDIRECT_DEV_PORT
     ) {
       return true
     }

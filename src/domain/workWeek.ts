@@ -81,6 +81,30 @@ export function isWorkCalendarMuted(
 }
 
 /**
+ * Inicio de la próxima jornada laboral estrictamente posterior a `now`.
+ * Usado para diferir avisos nativos fuera de horario.
+ */
+export function nextWorkPeriodStart(now: Date, settings: WorkWeekSettings): Date {
+  const days = new Set(settings.workDays)
+  if (days.size === 0) {
+    const fallback = new Date(now)
+    fallback.setDate(fallback.getDate() + 1)
+    return fallback
+  }
+  for (let offset = 0; offset < 14; offset++) {
+    const day = new Date(now)
+    day.setHours(0, 0, 0, 0)
+    day.setDate(day.getDate() + offset)
+    if (!days.has(isoWeekday(day))) continue
+    const periodStart = atMinuteOnDay(day, settings.startMinute)
+    if (periodStart.getTime() > now.getTime()) return periodStart
+  }
+  const fallback = new Date(now)
+  fallback.setDate(fallback.getDate() + 1)
+  return fallback
+}
+
+/**
  * Fin de la jornada laboral previa (ancla del lookback diferido).
  * Si ahora estás dentro de jornada, es el fin del día laboral anterior.
  */

@@ -1,5 +1,6 @@
 import type { EventDraft, EventKind } from '../types'
 import { normalizeEventKind } from '../types'
+import { isCapacitor } from './platform'
 
 const MAX_TITLE = 200
 const MAX_DESCRIPTION = 5000
@@ -154,8 +155,13 @@ export function isSafeReminderToken(token: string): boolean {
   return SAFE_TOKEN_RE.test(token)
 }
 
+/** CSP meta solo en web producción; en Capacitor rompe el bridge nativo. */
+export function shouldApplyWebCsp(env: { prod: boolean; capacitor: boolean }): boolean {
+  return env.prod && !env.capacitor
+}
+
 export function applyWebCsp(): void {
-  if (!import.meta.env.PROD) return
+  if (!shouldApplyWebCsp({ prod: import.meta.env.PROD, capacitor: isCapacitor() })) return
   if (document.querySelector('meta[http-equiv="Content-Security-Policy"]')) return
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined

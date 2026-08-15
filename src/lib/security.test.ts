@@ -9,6 +9,7 @@ import {
   sanitizeColor,
   sanitizeEventDraft,
   sanitizeRRule,
+  shouldApplyWebCsp,
 } from './security'
 
 describe('security helpers', () => {
@@ -104,5 +105,12 @@ describe('security helpers', () => {
         kind: 'event',
       }),
     ).toThrow(/Calendario inválido/)
+  })
+
+  it('no aplica CSP meta en Capacitor ni fuera de producción', () => {
+    expect(shouldApplyWebCsp({ prod: true, capacitor: false })).toBe(true)
+    expect(shouldApplyWebCsp({ prod: true, capacitor: true })).toBe(false)
+    expect(shouldApplyWebCsp({ prod: false, capacitor: false })).toBe(false)
+    expect(shouldApplyWebCsp({ prod: false, capacitor: true })).toBe(false)
   })
 })

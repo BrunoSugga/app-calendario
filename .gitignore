@@ -40,3 +40,16 @@ instaladores/
 
 # Supabase CLI local
 supabase/.temp/
+
+# Capacitor / Android / iOS
+android/local.properties
+android/.gradle/
+android/**/build/
+android/captures/
+android/.idea/
+ios/App/Pods/
+ios/Capacitor/Pods/
+ios/App/App/public
+*.keystore
+*.jks
+keystore.properties

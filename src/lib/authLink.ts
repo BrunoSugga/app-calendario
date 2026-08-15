@@ -1,4 +1,8 @@
 import type { EmailOtpType, SupabaseClient } from '@supabase/supabase-js'
+import {
+  AUTH_REDIRECT_PUBLIC_ORIGIN,
+  isAllowedAuthRedirectUrl,
+} from './authRedirectAllowlist'
 
 export const PASSWORD_SETUP_FLAG = 'calendario.passwordSetup'
 export const PASSWORD_SETUP_MODE = 'calendario.passwordSetupMode'
@@ -70,54 +74,35 @@ export function getPasswordSetupMode(): PasswordSetupMode | null {
 
 export function isSafeAuthRedirect(value: string): boolean {
   try {
-    const parsed = new URL(value)
-    if (parsed.protocol === 'https:') return true
-    if (
-      parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
-    ) {
-      return true
-    }
-    return false
+    return isAllowedAuthRedirectUrl(new URL(value))
   } catch {
     return false
   }
 }
 
-/** Orígenes públicos donde el invitado puede abrir el link del mail. */
-const DEFAULT_PUBLIC_APP_ORIGIN = 'https://calendario.bmatrix.org'
+function withTrailingSlash(value: string): string {
+  return value.replace(/\/?$/, '/')
+}
 
 /**
  * Base URL para redirects de Auth (invite / recovery).
- * En Tauri `window.location.origin` es `http://tauri.localhost` (inválido);
- * usamos la URL web pública configurada o el default de producción.
+ * Tauri (`http://tauri.localhost`) y Capacitor (`https://localhost`) no son destinos
+ * válidos de mail: allowlist estricta o `https://calendario.bmatrix.org`.
  */
-export function authAppBaseUrl(): string {
-  const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim()
+export function authAppBaseUrl(
+  configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim(),
+): string {
   if (configured) {
-    const normalized = configured.replace(/\/?$/, '/')
+    const normalized = withTrailingSlash(configured)
     if (isSafeAuthRedirect(normalized)) return normalized
   }
 
-  const current = `${window.location.origin}${import.meta.env.BASE_URL || '/'}`.replace(
-    /\/?$/,
-    '/',
+  const current = withTrailingSlash(
+    `${window.location.origin}${import.meta.env.BASE_URL || '/'}`,
   )
-  if (isSafeAuthRedirect(current)) {
-    try {
-      const host = new URL(current).hostname
-      // Orígenes del webview Tauri: no sirven en el mail del invitado
-      if (host === 'tauri.localhost' || host.endsWith('.tauri.localhost')) {
-        // fall through to public default
-      } else {
-        return current
-      }
-    } catch {
-      // fall through
-    }
-  }
+  if (isSafeAuthRedirect(current)) return current
 
-  return `${DEFAULT_PUBLIC_APP_ORIGIN}/`
+  return `${AUTH_REDIRECT_PUBLIC_ORIGIN}/`
 }
 
 export function authPasswordSetupRedirect(): string {

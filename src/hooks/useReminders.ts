@@ -15,7 +15,9 @@ import {
   openReminderWindow,
   type RescheduleEventPayload,
 } from '../lib/tauri'
+import { isCapacitor } from '../lib/platform'
 import { isSafeId, isSafeIsoDate } from '../lib/security'
+import { NATIVE_REMINDER_HORIZON_HOURS } from '../lib/nativeReminders'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useAuth } from '../context/AuthContext'
 import type { EventKind, Occurrence } from '../types'
@@ -278,6 +280,41 @@ export function useReminders(options: Options = {}): {
     }, 15000)
 
     return () => window.clearInterval(id)
+  }, [user, loading, events, calendars, exceptions, workWeek])
+
+  useEffect(() => {
+    if (!isCapacitor()) return
+    let cancelled = false
+    let stop: (() => void) | undefined
+    void (async () => {
+      const { listenNativeReminderActions, requestNativeReminderPermissions } = await import(
+        '../lib/nativeRemindersBridge'
+      )
+      if (cancelled) return
+      await requestNativeReminderPermissions()
+      if (cancelled) return
+      stop = await listenNativeReminderActions()
+    })()
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isCapacitor() || !user || loading) return
+    const now = new Date()
+    const rangeEnd = new Date(now.getTime() + NATIVE_REMINDER_HORIZON_HOURS * 60 * 60 * 1000)
+    const upcoming = expandOccurrences(events, calendars, exceptions, now, rangeEnd)
+    void import('../lib/nativeRemindersBridge').then(({ syncNativeReminderSchedule }) =>
+      syncNativeReminderSchedule(upcoming, {
+        now,
+        calendars,
+        workWeek,
+        fired: loadFired(),
+        snoozeActive,
+      }),
+    )
   }, [user, loading, events, calendars, exceptions, workWeek])
 
   return { missedReminders, dismissMissedReminders }

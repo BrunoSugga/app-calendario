@@ -78,12 +78,13 @@ sequenceDiagram
 
 - Site URL: `https://calendario.bmatrix.org`
 - Redirect URLs: `https://calendario.bmatrix.org/**`, `https://bmx-calendario.pages.dev/**`, `http://localhost:5173/**`
+- Allowlist de código (cliente + Edge `invite-user`): esos hosts. Se rechaza `https://localhost`, `capacitor://`, `tauri.localhost` y cualquier otro `https`.
 
 ### Edge Function `invite-user`
 
 - JWT + `role=admin`.
 - Invite nuevo; si “already registered” → `resetPasswordForEmail`.
-- `redirectTo`: `https://*` o `http://localhost|127.0.0.1`.
+- `redirectTo`: allowlist (`calendario.bmatrix.org`, `bmx-calendario.pages.dev`, `http://localhost:5173`). No cualquier `https:`.
 - Redeploy: `npx supabase functions deploy invite-user --project-ref hznvsuobulrxxpofebkq`
 
 ### RLS / DB
@@ -106,8 +107,10 @@ sequenceDiagram
 npm test
 ```
 
-- `security.test.ts` — password, emails, sanitización.
-- `authLink.test.ts` — sesión, token_hash, PKCE, errores URL, set-password stale.
+- `security.test.ts` — password, emails, sanitización, CSP no se aplica en Capacitor.
+- `authLink.test.ts` — sesión, token_hash, PKCE, allowlist de redirects (Capacitor/Tauri).
+- `nativeReminders.test.ts` — tope 100, sin descripción/HTML, extras validados, defer laboral.
+- `mobileConfig.security.test.ts` — sin `service_role` en config; `allowBackup=false`.
 - `calendarBackup.test.ts` — export/import, topes de tamaño y arrays.
 - `LoginPage.test.tsx` — cloud sin signup público.
 
@@ -125,6 +128,21 @@ npm test
 - [x] Baseline primeros usuarios **v1.1.0**
 - [ ] Rotar tokens pegados en chat (si aplica)
 - [ ] (Opcional) Cloudflare Access
+
+## Móvil (Capacitor)
+
+- APK sideload: misma clave **anon** que web (pública). Nunca `service_role` en `android/`, `ios/`, `capacitor.config.ts` ni `VITE_*`.
+- `android:allowBackup="false"` + network security sin cleartext. WebView debug off en release.
+- Notificaciones: canal `PRIVATE`; extras validados (`isSafeId` / `isSafeIsoDate`); sin descripción en el texto visible.
+- Superficie nativa mínima: App, Keyboard, StatusBar, LocalNotifications. Sin custom URL scheme de Auth en v1.
+- Logout de la app borra la sesión del WebView.
+
+### Checklist manual APK
+
+- Invite desde la APK (admin) → el mail apunta a `calendario.bmatrix.org`, no a localhost.
+- Logout; otro usuario en el mismo teléfono no hereda la cuenta.
+- Lock screen no muestra la descripción del evento.
+- Spot-check del APK (`strings`) sin `service_role`.
 
 ## Deuda menor
 
