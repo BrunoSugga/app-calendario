@@ -22,6 +22,8 @@ export function Toolbar({
   onZoom,
   onOpenSidebar,
 }: Props) {
+  const isOrganizer = view === 'organizer'
+
   return (
     <header className="toolbar">
       {onOpenSidebar && (
@@ -48,24 +50,55 @@ export function Toolbar({
       </div>
 
       <div className="toolbar-nav">
-        <button type="button" className="btn icon" onClick={() => onNavigate(-1)}>
-          ‹
-        </button>
-        <button type="button" className="btn icon" onClick={() => onNavigate(1)}>
-          ›
-        </button>
-        <h1 className="toolbar-title">{formatDayHeader(selectedDate)}</h1>
+        {!isOrganizer && (
+          <>
+            <button type="button" className="btn icon" onClick={() => onNavigate(-1)}>
+              ‹
+            </button>
+            <button type="button" className="btn icon" onClick={() => onNavigate(1)}>
+              ›
+            </button>
+          </>
+        )}
+        <h1 className="toolbar-title">
+          {isOrganizer ? 'organizador de eventos' : formatDayHeader(selectedDate)}
+        </h1>
       </div>
 
       <div className="toolbar-actions">
-        <button type="button" className="btn icon" title="Alejar" onClick={() => onZoom(-1)}>
-          −
+        {!isOrganizer && (
+          <>
+            <button type="button" className="btn icon" title="Alejar" onClick={() => onZoom(-1)}>
+              −
+            </button>
+            <button type="button" className="btn icon" title="Acercar" onClick={() => onZoom(1)}>
+              +
+            </button>
+            <span className="zoom-label">{zoom}%</span>
+          </>
+        )}
+        <button
+          type="button"
+          className={
+            isOrganizer
+              ? 'btn toolbar-mode-button organizer-button active'
+              : 'btn toolbar-mode-button organizer-button'
+          }
+          aria-pressed={isOrganizer}
+          onClick={() => onViewChange('organizer')}
+        >
+          Organizador
         </button>
-        <button type="button" className="btn icon" title="Acercar" onClick={() => onZoom(1)}>
-          +
-        </button>
-        <span className="zoom-label">{zoom}%</span>
-        <button type="button" className="btn today" onClick={onToday}>
+        <button
+          type="button"
+          className={
+            isOrganizer
+              ? 'btn toolbar-mode-button today'
+              : 'btn toolbar-mode-button today active'
+          }
+          aria-pressed={!isOrganizer}
+          onClick={onToday}
+        >
           {new Date().getDate()} Hoy
         </button>
       </div>

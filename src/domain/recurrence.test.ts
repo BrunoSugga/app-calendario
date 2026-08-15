@@ -6,6 +6,7 @@ import {
   jsDateToWeekdayIndex,
   labelForRRule,
   presetFromRRule,
+  recurrenceEndFromRRule,
   weekdaysFromRRule,
 } from './recurrence'
 
@@ -77,6 +78,16 @@ describe('recurrence helpers', () => {
     expect(labelForRRule(weekly)).toContain('Semanalmente')
     expect(labelForRRule(weekly)).toContain('Lu')
     expect(labelForRRule(weekly)).toContain('Mi')
+  })
+
+  it('conserva y lee la fecha de finalización', () => {
+    const until = new Date('2026-08-20T23:59:59.999Z')
+    const daily = buildRRule('daily', new Date('2026-08-03T10:00:00.000Z'), [], until)
+    expect(daily).toContain('UNTIL=')
+    expect(
+      recurrenceEndFromRRule(daily, new Date('2026-08-03T10:00:00.000Z'))?.toISOString(),
+    ).toBe('2026-08-20T23:59:59.000Z')
+    expect(recurrenceEndFromRRule(buildRRule('daily', new Date()), new Date())).toBeNull()
   })
 })
 

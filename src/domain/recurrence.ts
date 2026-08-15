@@ -97,6 +97,26 @@ export function weekdaysFromRRule(rrule: string | null, fallbackDate?: Date): We
   }
 }
 
+export function recurrenceEndFromRRule(
+  rrule: string | null,
+  fallbackDate?: Date,
+): Date | null {
+  if (!rrule) return null
+  try {
+    const rule = rrulestr(rrule, {
+      dtstart: fallbackDate ?? new Date(),
+    }) as RRule
+    if (rule.options.until) return new Date(rule.options.until)
+    if (rule.origOptions.count) {
+      const dates = rule.all()
+      return dates.at(-1) ?? null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function labelForRRule(rrule: string | null): string | null {
   const preset = presetFromRRule(rrule)
   if (preset === 'none') return null

@@ -12,6 +12,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
+import type { ViewMode } from '../types'
 
 export function formatDayHeader(date: Date): string {
   return format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
@@ -65,9 +66,10 @@ export function buildMonthCells(anchor: Date): Date[] {
   return eachDay(start, end)
 }
 
-export function navigateView(date: Date, mode: 'day' | 'week' | 'month', delta: number): Date {
+export function navigateView(date: Date, mode: ViewMode, delta: number): Date {
   if (mode === 'day') return addDays(date, delta)
   if (mode === 'week') return addDays(date, delta * 7)
+  if (mode === 'organizer') return date
   return addMonths(date, delta)
 }
 

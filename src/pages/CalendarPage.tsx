@@ -5,6 +5,7 @@ import { Toolbar } from '../components/Toolbar/Toolbar'
 import { DayView } from '../components/Views/DayView'
 import { WeekView } from '../components/Views/WeekView'
 import { MonthView } from '../components/Views/MonthView'
+import { OrganizerView } from '../components/Views/OrganizerView'
 import { EventModal } from '../components/Event/EventModal'
 import { MissedRemindersModal } from '../components/Reminder/MissedRemindersModal'
 import { ReminderWindow } from '../components/Reminder/ReminderWindow'
@@ -174,6 +175,7 @@ export function CalendarPage() {
   const range = useMemo(() => {
     if (view === 'day') return dayRange(selectedDate)
     if (view === 'week') return weekRange(selectedDate)
+    if (view === 'organizer') return dayRange(selectedDate)
     return monthGridRange(selectedDate)
   }, [view, selectedDate])
 
@@ -249,7 +251,10 @@ export function CalendarPage() {
           zoom={zoom}
           onViewChange={setView}
           onNavigate={(delta) => setSelectedDate((d) => navigateView(d, view, delta))}
-          onToday={() => setSelectedDate(startOfDay(new Date()))}
+          onToday={() => {
+            setSelectedDate(startOfDay(new Date()))
+            if (view === 'organizer') setView('day')
+          }}
           onZoom={(delta) => setZoom((z) => Math.min(160, Math.max(70, z + delta * 10)))}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
@@ -301,6 +306,15 @@ export function CalendarPage() {
                 setView('day')
                 openNewAt(d)
               }}
+            />
+          )}
+          {view === 'organizer' && (
+            <OrganizerView
+              events={events}
+              calendars={calendars}
+              exceptions={exceptions}
+              onOpenOccurrence={openOccurrence}
+              onDeleteOccurrence={openOccurrence}
             />
           )}
         </div>

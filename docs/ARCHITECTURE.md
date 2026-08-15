@@ -104,6 +104,8 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 ## UI principal
 
 - Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir).
+- **Organizador de eventos:** botón junto a “Hoy” que reemplaza la grilla por una lista cronológica con búsqueda y filtros por tipo, calendario, periodicidad y estado. Los eventos simples aparecen una vez; de cada serie se muestra solo la próxima ocurrencia efectiva (o la última si la serie terminó), respetando excepciones. El historial se abre contraído en bloques de 90 días. Editar/eliminar reutiliza el alcance “esta ocurrencia / toda la serie”.
+- Las recurrencias pueden tener una fecha opcional **Finaliza**, persistida como `UNTIL` en el RRULE. Las series existentes sin límite se muestran como “Sin fecha de fin”.
 - En **navegador** (no Tauri ni Capacitor): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
 - **Prefs por dispositivo** (`localStorage` `calendario.device.calendars.v1.<userId>`): calendario predeterminado + visibilidad de “Mis calendarios”. No se sincronizan entre PCs; al crear un evento se usa el predeterminado de *este* dispositivo.
 - **Gestionar calendarios**: modal para crear, renombrar, color, eliminar y restaurar. Al eliminar: descarga obligatoria de respaldo JSON (`calendarBackup`) y opción de mover eventos a otro calendario o borrarlos (recuperables vía restaurar). Import con topes DoS (5 MB / 5000 eventos·excepciones / 10000 task runs).
@@ -114,7 +116,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.0** en `main`; instalador publicado para usuarios: **v1.1.5** hasta el próximo Release desktop.
+- Código **v1.2.1** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

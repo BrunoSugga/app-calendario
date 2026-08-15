@@ -13,6 +13,7 @@ import {
   buildRRule,
   jsDateToWeekdayIndex,
   presetFromRRule,
+  recurrenceEndFromRRule,
   weekdaysFromRRule,
   type RecurrencePreset,
   type WeekdayIndex,
@@ -38,6 +39,12 @@ function toLocalInput(value: string | Date | undefined, fallback: Date): string 
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+function toLocalDateInput(value: Date | null): string {
+  if (!value) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+}
+
 export function EventModal({
   open,
   calendars,
@@ -61,6 +68,7 @@ export function EventModal({
   const [reminder, setReminder] = useState(15)
   const [recurrence, setRecurrence] = useState<RecurrencePreset>('none')
   const [weekdays, setWeekdays] = useState<WeekdayIndex[]>([])
+  const [recurrenceUntil, setRecurrenceUntil] = useState('')
   const [editScope, setEditScope] = useState<'single' | 'series'>('series')
   const [completeNote, setCompleteNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -103,6 +111,7 @@ export function EventModal({
     setReminder(initial?.reminder_minutes ?? initial?.occurrence?.reminderMinutes ?? 15)
     setRecurrence(presetFromRRule(rrule))
     setWeekdays(weekdaysFromRRule(rrule, start))
+    setRecurrenceUntil(toLocalDateInput(recurrenceEndFromRRule(rrule, start)))
     setEditScope(isRecurring ? 'single' : 'series')
     setCompleteNote(initial?.master?.task_note ?? '')
     setError(null)
@@ -141,15 +150,24 @@ export function EventModal({
       setError('Elegí al menos un día de la semana')
       return
     }
+    const startDate = new Date(startsAt)
+    let untilDate: Date | null = null
+    if (recurrence !== 'none' && recurrenceUntil) {
+      const [year, month, day] = recurrenceUntil.split('-').map(Number)
+      untilDate = new Date(year, month - 1, day, 23, 59, 59, 999)
+      if (Number.isNaN(untilDate.getTime()) || untilDate < startDate) {
+        setError('La repetición debe finalizar en la fecha de inicio o después')
+        return
+      }
+    }
     setBusy(true)
     setError(null)
     try {
-      const startDate = new Date(startsAt)
       const endDate = kind === 'reminder' ? startDate : new Date(endsAt)
       const rrule =
         isEdit && editScope === 'single'
           ? initial?.master?.rrule ?? null
-          : buildRRule(recurrence, startDate, weekdays)
+          : buildRRule(recurrence, startDate, weekdays, untilDate)
 
       await onSave({
         id: initial?.id,
@@ -318,6 +336,21 @@ export function EventModal({
                 </div>
               </fieldset>
             )}
+
+            {recurrence !== 'none' && (
+              <label>
+                Finaliza (opcional)
+                <input
+                  type="date"
+                  value={recurrenceUntil}
+                  min={startsAt.slice(0, 10)}
+                  onChange={(e) => setRecurrenceUntil(e.target.value)}
+                />
+                <span className="field-hint">
+                  Dejalo vacío para que la serie no tenga fecha de fin.
+                </span>
+              </label>
+            )}
           </>
         )}
 
@@ -423,6 +456,9 @@ export function EventModal({
               className="btn danger"
               disabled={busy}
               onClick={async () => {
+                const target =
+                  isRecurring && editScope === 'single' ? 'esta ocurrencia' : 'toda la serie'
+                if (!window.confirm(`¿Eliminar ${target}? Esta acción no se puede deshacer.`)) return
                 setBusy(true)
                 try {
                   await onDelete(isRecurring ? editScope : 'series')

@@ -74,7 +74,7 @@ export type Occurrence = {
   taskStatus: TaskStatus | null
 }
 
-export type ViewMode = 'day' | 'week' | 'month'
+export type ViewMode = 'day' | 'week' | 'month' | 'organizer'
 
 export type EventDraft = {
   id?: string

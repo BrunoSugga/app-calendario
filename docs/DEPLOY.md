@@ -50,12 +50,12 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - [x] `calendario.bmatrix.org` **Active** en Cloudflare
 - [x] Site URL Supabase = `https://calendario.bmatrix.org` (confirmar en dashboard si un invite falla)
 - [x] Invite + set-password probado (navegador OK; escritorio desde v1.0.8+)
-- [x] Código **v1.2.0** en `main` (Capacitor + allowlist Auth; commit `fa32dad`)
+- [x] Código **v1.2.1** en `main` (Organizador + fin de recurrencias + Capacitor)
 - [ ] Redeploy Edge Function `invite-user` (allowlist en el servidor)
 - [ ] APK debug en dispositivo (Android Studio en casa)
 - [ ] Invite de prueba desde la APK → mail a `calendario.bmatrix.org`
 - [ ] APK release firmada (keystore fuera del repo)
-- [ ] (Opcional) Release desktop 1.2.0
+- [x] Release desktop 1.2.1
 - [ ] (Opcional) Cloudflare Access después
 - [ ] Rotar tokens si se pegaron en chats antiguos
 
@@ -63,7 +63,8 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 - Publicar: Actions → **Release desktop** con la versión alineada a `package.json` / `tauri.conf.json` / `Cargo.toml`.
 - La app instalada (1.0.1+) pregunta al abrir si hay release más nueva (`latest.json` del updater).
-- **v1.2.0** (código en `main`, 2026-08-15) = scaffold Capacitor Android/iOS + allowlist Auth + avisos locales nativos. APK y Release desktop **aún no** publicados.
+- **v1.2.1** = Organizador cronológico, edición/eliminación desde la lista, fecha final de recurrencias y ajustes visuales del selector Organizador/Hoy.
+- **v1.2.0** = scaffold Capacitor Android/iOS + allowlist Auth + avisos locales nativos. APK no publicada.
 - **v1.1.5** = fix catch-up al reabrir (no avanzar `lastScan` antes de cargar eventos).
 - **v1.1.4** = catch-up de avisos al reabrir (popup ≤15 días; modal resumen si más antiguos).
 - **v1.1.3** = topes DoS en import de respaldos JSON + fix build release (tipos en tests).

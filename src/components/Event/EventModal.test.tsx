@@ -100,4 +100,56 @@ describe('EventModal', () => {
     await user.selectOptions(screen.getByLabelText(/^Tipo$/i), 'event')
     expect(screen.getByLabelText(/^Fin$/i)).toBeInTheDocument()
   })
+
+  it('guarda la fecha opcional de finalización de una serie', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(
+      <EventModal
+        open
+        calendars={calendars}
+        onClose={vi.fn()}
+        onSave={onSave}
+        initial={{
+          calendar_id: 'cal-1',
+          starts_at: '2026-08-05T10:00:00.000Z',
+          ends_at: '2026-08-05T11:00:00.000Z',
+        }}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/Título/i), 'Serie limitada')
+    await user.selectOptions(screen.getByLabelText(/Repetición/i), 'daily')
+    await user.type(screen.getByLabelText(/Finaliza/i), '2026-08-20')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0][0].rrule).toContain('UNTIL=')
+  })
+
+  it('rechaza una finalización anterior al inicio', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+    render(
+      <EventModal
+        open
+        calendars={calendars}
+        onClose={vi.fn()}
+        onSave={onSave}
+        initial={{
+          calendar_id: 'cal-1',
+          starts_at: '2026-08-05T10:00:00.000Z',
+          ends_at: '2026-08-05T11:00:00.000Z',
+        }}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/Título/i), 'Serie inválida')
+    await user.selectOptions(screen.getByLabelText(/Repetición/i), 'daily')
+    await user.type(screen.getByLabelText(/Finaliza/i), '2026-08-01')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(screen.getByText(/debe finalizar en la fecha de inicio o después/i)).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+  })
 })
