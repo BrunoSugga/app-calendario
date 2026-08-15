@@ -8,7 +8,7 @@ Aplicación de calendario estilo Outlook con:
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
-**Producción (baseline primeros usuarios v1.1.0):** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · escritorio vía GitHub Releases.
+**Producción:** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · escritorio instalado **v1.1.5** · código **v1.2.0** en `main` (APK Capacitor lista para armar; aún no distribuida).
 
 ## Contexto del proyecto (agentes y humanos)
 
@@ -100,8 +100,13 @@ El build de escritorio genera instaladores Windows (NSIS `.exe` y MSI) en `src-t
 
 ## Android (APK sideload)
 
+El código ya está en GitHub (`main`). Falta compilarla en una PC con Android Studio:
+
 ```bash
+git pull
+npm install
 npm run cap:sync
+npx cap open android         # Android Studio
 npx cap run android          # debug en dispositivo/emulador
 npm run android:apk          # assembleRelease (hace falta keystore)
 ```

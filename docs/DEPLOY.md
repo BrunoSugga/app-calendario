@@ -50,7 +50,12 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 - [x] `calendario.bmatrix.org` **Active** en Cloudflare
 - [x] Site URL Supabase = `https://calendario.bmatrix.org` (confirmar en dashboard si un invite falla)
 - [x] Invite + set-password probado (navegador OK; escritorio desde v1.0.8+)
-- [x] Baseline: desktop **v1.2.0** (+ web canónica + APK Capacitor; allowlist Auth; avisos nativos Android)
+- [x] Código **v1.2.0** en `main` (Capacitor + allowlist Auth; commit `fa32dad`)
+- [ ] Redeploy Edge Function `invite-user` (allowlist en el servidor)
+- [ ] APK debug en dispositivo (Android Studio en casa)
+- [ ] Invite de prueba desde la APK → mail a `calendario.bmatrix.org`
+- [ ] APK release firmada (keystore fuera del repo)
+- [ ] (Opcional) Release desktop 1.2.0
 - [ ] (Opcional) Cloudflare Access después
 - [ ] Rotar tokens si se pegaron en chats antiguos
 
@@ -58,7 +63,7 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 - Publicar: Actions → **Release desktop** con la versión alineada a `package.json` / `tauri.conf.json` / `Cargo.toml`.
 - La app instalada (1.0.1+) pregunta al abrir si hay release más nueva (`latest.json` del updater).
-- **v1.2.0** = Capacitor Android (APK sideload) + esqueleto iOS; avisos locales nativos; allowlist de redirects Auth.
+- **v1.2.0** (código en `main`, 2026-08-15) = scaffold Capacitor Android/iOS + allowlist Auth + avisos locales nativos. APK y Release desktop **aún no** publicados.
 - **v1.1.5** = fix catch-up al reabrir (no avanzar `lastScan` antes de cargar eventos).
 - **v1.1.4** = catch-up de avisos al reabrir (popup ≤15 días; modal resumen si más antiguos).
 - **v1.1.3** = topes DoS en import de respaldos JSON + fix build release (tipos en tests).
@@ -75,11 +80,16 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 ## Android (APK sideload)
 
-Misma web empaquetada con Capacitor (`android/`). iOS: carpeta `ios/` como esqueleto (hace falta Mac + cuenta Apple para IPA).
+Misma web empaquetada con Capacitor (`android/`). Código en `main`; **falta** abrir el proyecto en Android Studio y generar/probar la APK. iOS: carpeta `ios/` como esqueleto (Mac + cuenta Apple para IPA).
+
+En la PC de casa (con Android Studio):
 
 ```bash
+git pull
+npm install
 npm run cap:sync
-npx cap run android
+npx cap open android
+# o: npx cap run android
 ```
 
 Release firmada (keystore **fuera del repo**):

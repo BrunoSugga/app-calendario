@@ -17,7 +17,7 @@ Actualizá los docs afectados en la misma PR/cambio:
 | Cambio | Actualizar |
 |--------|------------|
 | Auth, roles, invites, RLS, Edge Functions | `docs/SECURITY.md` |
-| Estructura de carpetas, modos cloud/local, Tauri | `docs/ARCHITECTURE.md` |
+| Estructura de carpetas, modos cloud/local, Tauri, Capacitor | `docs/ARCHITECTURE.md` |
 | Hosting, env vars, redirects, Cloudflare/GitHub Pages | `docs/DEPLOY.md` |
 | Flujo de trabajo del agente / convenciones | `AGENTS.md` y/o `.cursor/rules/` |
 | Setup para humanos | `README.md` |
@@ -38,20 +38,26 @@ Actualizá los docs afectados en la misma PR/cambio:
 - Mantener tests (`npm test`) y lint (`npm run lint`) en verde cuando el cambio lo amerite.
 - No pegar tokens/secrets en el chat si se puede evitar; si el usuario los pasa, usarlos y recordarle rotarlos.
 
-## Estado actual (2026-08-14) — baseline **v1.2.0**
+## Estado actual (2026-08-15) — código **v1.2.0** en `main`
 
 Ver detalle en `docs/SECURITY.md` y `docs/DEPLOY.md`.
 
-- **Baseline:** desktop **v1.2.0** + web en `calendario.bmatrix.org` + APK Android (Capacitor sideload). iOS: esqueleto `ios/` (sin IPA).
+- **GitHub:** `main` incluye Capacitor (`android/` + esqueleto `ios/`), allowlist de Auth y avisos nativos. Commit de scaffold: `fa32dad`.
+- **Usuarios en producción hoy:** web `calendario.bmatrix.org` (Cloudflare al push a `main`) + desktop instalado **v1.1.5**. El instalador 1.2.0 **no** se publicó (hace falta Actions → Release desktop).
+- **APK:** código listo; **no** compilada ni probada en teléfono. Seguir en PC con Android Studio (`git pull` → `npm install` → `npx cap sync` → `npx cap open android`).
 - **Admin:** UUID `bfd18782-7bea-4386-bd8f-de050f398aec` (Bruno Sugga).
 - **Web live:** `https://calendario.bmatrix.org` (fallback `https://bmx-calendario.pages.dev`).
-- **Custom domain:** Active en Cloudflare Pages.
-- **Site URL Supabase:** debe ser `https://calendario.bmatrix.org` (Redirect: custom + pages.dev + localhost:5173). **No** `https://localhost` (Capacitor).
-- **Invites:** cualquier email; redirect allowlist (web pública). Desde Tauri/APK nunca el origin del WebView. UI: rueda de ajustes en sidebar → Gestionar calendarios / Invitar / Salir.
-- **Avisos:** steppers; Descartar → Reagendar → Abrir; catch-up al reabrir; en Android notificaciones locales (tope 100 / 48 h). Popups requeridos en web.
+- **Site URL Supabase:** `https://calendario.bmatrix.org`. Redirect: custom + pages.dev + `localhost:5173`. **No** `https://localhost` (Capacitor).
+- **Invites:** allowlist en cliente (ya en el repo / web). Edge Function `invite-user` **pendiente de redeploy** para la misma allowlist.
+- **Avisos:** web popup; desktop WebviewWindow; Android LocalNotifications (código listo, falta probar en dispositivo).
 - **Rate limit mails Supabase (free):** `email rate limit exceeded` → esperar ~30–60 min.
-- **Borrar usuarios:** solo Dashboard Supabase → Authentication → Users.
-- **GitHub Pages:** apagado. Deploy web: Cloudflare Pages al push a `main`.
-- **Desktop publish:** bump `package.json` + `tauri.conf.json` + `Cargo.toml`/`Cargo.lock` → Actions → **Release desktop**.
-- **Android APK:** `npm run cap:sync` / `npm run android:apk`. Keystore fuera del repo.
-- **Tests:** auth + security + `reminders.test.ts` + `nativeReminders.test.ts` + `mobileConfig.security.test.ts`.
+- **Tests:** `npm test` (110) incluye `authLink`, `nativeReminders`, `mobileConfig.security`.
+
+### Pendiente (siguiente sesión)
+
+1. En casa (Android Studio): `git pull`, `npm install`, `npx cap sync`, `npx cap open android` / `npx cap run android`. Probar login cloud, avisos con la app cerrada, drawer, logout.
+2. Redeploy Edge Function: `npx supabase functions deploy invite-user --project-ref hznvsuobulrxxpofebkq`.
+3. Invite desde la APK (admin) → el mail debe apuntar a `calendario.bmatrix.org`, no a localhost.
+4. Keystore fuera del repo + APK release sideload (`docs/DEPLOY.md`).
+5. (Opcional) Actions → **Release desktop** 1.2.0 si se quiere el instalador Windows alineado.
+6. iOS IPA: Mac + cuenta Apple (fuera de esta entrega). Play Store / TestFlight: no.

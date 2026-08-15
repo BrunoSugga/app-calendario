@@ -16,4 +16,5 @@ alwaysApply: false
 - `assertCloudPassword`: mín. 8 + letra y número.
 - Cliente: anon + PKCE; `detectSessionInUrl=false`.
 - Site URL debe ser un host que responda (pages.dev si custom está Verifying).
+- Redirects de invite: allowlist (`calendario.bmatrix.org`, `bmx-calendario.pages.dev`, `localhost:5173`). Nunca `https://localhost` ni cualquier `https:`.
 - Ante cambios auth: `npm test`.

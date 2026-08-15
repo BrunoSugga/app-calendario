@@ -22,13 +22,14 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 - Responder en español al usuario.
 - No commits salvo pedido explícito.
 
-## Recordatorios operativos (2026-08)
+## Recordatorios operativos (2026-08-15)
 
-- **Baseline usuarios:** desktop **v1.2.0** (+ web `calendario.bmatrix.org` + APK Capacitor).
+- **Código en GitHub `main`:** v1.2.0 (Capacitor Android/iOS + allowlist Auth). Usuarios: web live + desktop **v1.1.5**. APK **no** probada.
 - Web canónica: `https://calendario.bmatrix.org`. Fallback: `bmx-calendario.pages.dev`.
 - Site URL Supabase = `https://calendario.bmatrix.org`.
-- Invites desde Tauri/APK: redirect público (`VITE_PUBLIC_APP_URL`), no origin del webview (`tauri.localhost` / `https://localhost`).
-- Avisos: `docs/ARCHITECTURE.md` § Avisos; permitir popups en web; nativos en Android; tests en `reminders.test.ts` y `nativeReminders.test.ts`.
+- Invites: redirect público (`VITE_PUBLIC_APP_URL`); nunca `tauri.localhost` ni `https://localhost`. Redeploy de `invite-user` **pendiente**.
+- Avisos: `docs/ARCHITECTURE.md` § Avisos; popups en web; nativos en Android (falta probar en dispositivo).
+- Siguiente sesión: APK en Android Studio (`npx cap sync` / `npx cap open android`). Detalle en `AGENTS.md` § Pendiente.
 - `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
 - Probar invites en incógnito.
 - Sidebar: rueda de ajustes (Gestionar calendarios / Semana laboral / Invitar admin / Salir). Prefs de calendario por dispositivo.

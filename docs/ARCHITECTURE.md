@@ -30,7 +30,11 @@ src/
   hooks/          recordatorios, updater
   lib/
     security.ts   sanitización / CSP web
+    platform.ts   isTauri / isCapacitor
     authLink.ts   consume invite/recovery sin pisar otra sesión
+    authRedirectAllowlist.ts  hosts permitidos en mails de Auth
+    nativeReminders.ts        lote a programar (puro; tests)
+    nativeRemindersBridge.ts  plugin LocalNotifications (solo nativo)
     invite.ts     llama Edge Function invite-user
     supabase.ts   cliente anon + PKCE (detectSessionInUrl=false)
     localStore.ts modo local (+ workWeek opcional)
@@ -110,15 +114,16 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Baseline: **v1.2.0**.
+- Código **v1.2.0** en `main`; instalador publicado para usuarios: **v1.1.5** hasta el próximo Release desktop.
 
 ## Móvil (Capacitor)
 
-- Mismo `dist/` de Vite dentro de un WebView (`android/` + esqueleto `ios/`).
+- Mismo `dist/` de Vite dentro de un WebView (`android/` + esqueleto `ios/`). Código en GitHub (`main`, 2026-08-15).
 - App ID: `com.bruno.calendario`. Origin Android: `https://localhost` (no usar como redirect de Auth).
 - Invites/recovery: siempre `https://calendario.bmatrix.org` (allowlist en `authLink.ts`).
 - UI: sidebar en drawer bajo 900 px; overlay de aviso in-app.
 - Tras reboot, abrir la app para reprogramar avisos si el OEM no restauró alarmas.
+- **Estado:** scaffold listo; APK **no** corrida en dispositivo. iOS: solo esqueleto (sin IPA). Pendiente: `docs/DEPLOY.md` § Android y `AGENTS.md` § Pendiente.
 
 ## Deploy web
 

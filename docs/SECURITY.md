@@ -85,7 +85,7 @@ sequenceDiagram
 - JWT + `role=admin`.
 - Invite nuevo; si “already registered” → `resetPasswordForEmail`.
 - `redirectTo`: allowlist (`calendario.bmatrix.org`, `bmx-calendario.pages.dev`, `http://localhost:5173`). No cualquier `https:`.
-- Redeploy: `npx supabase functions deploy invite-user --project-ref hznvsuobulrxxpofebkq`
+- Código de allowlist **ya está en el repo**; el runtime de Supabase **sigue con la función vieja** hasta redeploy: `npx supabase functions deploy invite-user --project-ref hznvsuobulrxxpofebkq`.
 
 ### RLS / DB
 
@@ -126,6 +126,9 @@ npm test
 - [x] Site URL = `https://calendario.bmatrix.org` (verificar en dashboard si hay fallos de mail)
 - [x] Invite OK desde navegador; escritorio usa redirect público (v1.0.8+)
 - [x] Baseline primeros usuarios **v1.1.0**
+- [x] Allowlist Auth en cliente (v1.2.0, `main`)
+- [ ] Redeploy `invite-user` con la misma allowlist
+- [ ] Checklist manual APK (abajo)
 - [ ] Rotar tokens pegados en chat (si aplica)
 - [ ] (Opcional) Cloudflare Access
 
@@ -137,12 +140,13 @@ npm test
 - Superficie nativa mínima: App, Keyboard, StatusBar, LocalNotifications. Sin custom URL scheme de Auth en v1.
 - Logout de la app borra la sesión del WebView.
 
-### Checklist manual APK
+### Checklist manual APK (pendiente — no corrida aún)
 
 - Invite desde la APK (admin) → el mail apunta a `calendario.bmatrix.org`, no a localhost.
 - Logout; otro usuario en el mismo teléfono no hereda la cuenta.
 - Lock screen no muestra la descripción del evento.
 - Spot-check del APK (`strings`) sin `service_role`.
+- Aviso con la app cerrada / en segundo plano (y tras reboot, abrir una vez).
 
 ## Deuda menor
 
