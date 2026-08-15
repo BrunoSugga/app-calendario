@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
+import { REMINDER_MAX_SNOOZE_MINUTES } from '../../domain/reminders'
 import { clearFiredForEvent, clearReminderStateForEvent } from '../../domain/reschedule'
 import {
   consumeReminderPayload,
@@ -12,8 +13,6 @@ import {
 } from '../../lib/tauri'
 import { isCapacitor } from '../../lib/platform'
 import { isSafeId, isSafeReminderToken } from '../../lib/security'
-
-const SNOOZE_THRESHOLD_MINUTES = 12 * 60
 
 const SHORT_OPTIONS = [
   { label: '5 min', minutes: 5 },
@@ -231,7 +230,7 @@ export function ReminderWindow({
 
   async function snooze(minutes: number) {
     if (!data?.eventId || !isSafeId(data.eventId)) return
-    if (!Number.isFinite(minutes) || minutes < 1 || minutes > SNOOZE_THRESHOLD_MINUTES) return
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > REMINDER_MAX_SNOOZE_MINUTES) return
     const until = Date.now() + minutes * 60 * 1000
     clearFiredForEvent(data.eventId)
     localStorage.setItem(`calendario.snooze.${data.eventId}`, String(until))

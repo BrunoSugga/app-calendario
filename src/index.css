@@ -481,7 +481,7 @@ textarea:focus {
   top: calc(100% + 4px);
   right: 0;
   z-index: 30;
-  min-width: 10.5rem;
+  min-width: 11.5rem;
   padding: 0.25rem 0;
   border: 1px solid var(--border-soft);
   border-radius: 8px;
@@ -504,6 +504,27 @@ textarea:focus {
 .sidebar-settings-item:hover {
   background: rgba(58, 138, 223, 0.25);
   color: var(--celeste-soft, #9ec9f5);
+}
+
+.sidebar-settings-version {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem 0.35rem;
+  border-top: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: default;
+  user-select: text;
+}
+
+.sidebar-settings-version strong {
+  color: var(--celeste-soft);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.025em;
 }
 
 .sidebar-user {

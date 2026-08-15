@@ -11,6 +11,7 @@ export const REMINDER_GRACE_MINUTES = 5
 export const REMINDER_HORIZON_HOURS = 24
 /** Ventana de popups individuales al reabrir tras un cierre. */
 export const REMINDER_MAX_CATCHUP_DAYS = 15
+export const REMINDER_MAX_SNOOZE_MINUTES = 12 * 60
 
 export function reminderCatchUpFrom(
   now: Date,
@@ -61,6 +62,22 @@ export function reminderScanRange(
   }
 }
 
+export function reminderSnoozeLookback(
+  snoozeUntils: ReadonlyArray<number | null>,
+  now: Date,
+  maxSnoozeMinutes = REMINDER_MAX_SNOOZE_MINUTES,
+  maxCatchUpDays = REMINDER_MAX_CATCHUP_DAYS,
+): Date | null {
+  const oldestRelevant = addMinutes(now, -maxCatchUpDays * 24 * 60)
+  let earliest: Date | null = null
+  for (const until of snoozeUntils) {
+    if (until == null || !Number.isFinite(until) || until < oldestRelevant.getTime()) continue
+    const candidate = addMinutes(new Date(until), -maxSnoozeMinutes)
+    if (!earliest || candidate.getTime() < earliest.getTime()) earliest = candidate
+  }
+  return earliest
+}
+
 /** Amplía el lookback (lastScan / mute laboral) para no perder avisos diferidos o de catch-up. */
 export function reminderScanRangeWithWorkWeek(
   now: Date,
@@ -86,6 +103,7 @@ export function reminderFireKey(eventId: string, originalStartsAt: Date): string
 export type ReminderDueOptions = {
   graceMinutes?: number
   snoozeActive?: (eventId: string) => boolean
+  snoozeUntil?: (eventId: string) => number | null
   workWeek?: WorkWeekSettings | null
   /** Último escaneo exitoso; sin esto solo aplica la gracia corta. */
   lastScan?: Date | null
@@ -105,6 +123,22 @@ function remindAtOf(
   return addMinutes(occ.startsAt, -occ.reminderMinutes)
 }
 
+function effectiveRemindAt(
+  occ: Pick<Occurrence, 'eventId' | 'startsAt' | 'reminderMinutes'>,
+  options?: ReminderDueOptions,
+): Date {
+  const remindAt = remindAtOf(occ)
+  const snoozeUntil = options?.snoozeUntil?.(occ.eventId)
+  if (
+    snoozeUntil == null ||
+    !Number.isFinite(snoozeUntil) ||
+    snoozeUntil <= remindAt.getTime()
+  ) {
+    return remindAt
+  }
+  return new Date(snoozeUntil)
+}
+
 /** Elegible para popup individual (últimos 15 días desde lastScan / gracia). */
 export function isOccurrenceDueForReminder(
   occ: Pick<Occurrence, 'eventId' | 'calendarId' | 'startsAt' | 'reminderMinutes'>,
@@ -114,7 +148,7 @@ export function isOccurrenceDueForReminder(
   const graceMinutes = options?.graceMinutes ?? REMINDER_GRACE_MINUTES
   if (options?.snoozeActive?.(occ.eventId)) return false
 
-  const remindAt = remindAtOf(occ)
+  const remindAt = effectiveRemindAt(occ, options)
   if (remindAt > now) return false
 
   const settings = options?.workWeek
@@ -143,7 +177,7 @@ export function isOccurrenceAncientMissed(
   if (!lastScan || Number.isNaN(lastScan.getTime())) return false
   if (options?.snoozeActive?.(occ.eventId)) return false
 
-  const remindAt = remindAtOf(occ)
+  const remindAt = effectiveRemindAt(occ, options)
   if (remindAt > now) return false
 
   const settings = options?.workWeek

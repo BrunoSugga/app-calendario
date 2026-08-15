@@ -5,6 +5,7 @@ import {
   partitionMissedReminders,
   reminderFireKey,
   reminderScanRangeWithWorkWeek,
+  reminderSnoozeLookback,
   shouldCommitReminderLastScan,
 } from '../domain/reminders'
 import {
@@ -64,9 +65,13 @@ function saveLastScan(now: Date): void {
   localStorage.setItem(LAST_SCAN_KEY, now.toISOString())
 }
 
-function snoozeActive(eventId: string): boolean {
+function snoozeUntil(eventId: string): number | null {
   const until = Number(localStorage.getItem(`calendario.snooze.${eventId}`) ?? '0')
-  return until > Date.now()
+  return Number.isFinite(until) && until > 0 ? until : null
+}
+
+function snoozeActive(eventId: string): boolean {
+  return (snoozeUntil(eventId) ?? 0) > Date.now()
 }
 
 function toMissedRow(occ: Occurrence, calendarName: string): MissedReminderRow {
@@ -209,7 +214,15 @@ export function useReminders(options: Options = {}): {
       firedRef.current = loadFired()
       const now = new Date()
       const lastScan = loadLastScan()
-      const range = reminderScanRangeWithWorkWeek(now, workWeek, undefined, undefined, lastScan)
+      const snoozeLookback = reminderSnoozeLookback(
+        events.map((event) => snoozeUntil(event.id)),
+        now,
+      )
+      const scanFrom =
+        snoozeLookback && (!lastScan || snoozeLookback.getTime() < lastScan.getTime())
+          ? snoozeLookback
+          : lastScan
+      const range = reminderScanRangeWithWorkWeek(now, workWeek, undefined, undefined, scanFrom)
       const occurrences = expandOccurrences(
         events,
         calendars,
@@ -219,6 +232,7 @@ export function useReminders(options: Options = {}): {
       )
       const { due, ancient } = partitionMissedReminders(occurrences, now, firedRef.current, {
         snoozeActive,
+        snoozeUntil,
         workWeek,
         lastScan,
       })
@@ -251,6 +265,7 @@ export function useReminders(options: Options = {}): {
         }
         firedRef.current.add(key)
         saveFired(firedRef.current)
+        localStorage.removeItem(`calendario.snooze.${occ.eventId}`)
       }
 
       if (ancient.length > 0 && !missedOpenRef.current) {

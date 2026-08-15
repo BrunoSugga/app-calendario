@@ -51,7 +51,7 @@ La fuente canónica es `.cursor/rules/01-quality-security-gate.mdc`; comandos y 
 
 ## Estado operativo
 
-- Versión actual: **v1.2.1**.
+- Versión actual: **v1.2.2**.
 - Estado, riesgos y próximos pasos: `docs/PENDIENTES.md`.
 - Operación y producción: `docs/OPERATIONS.md` y `docs/DEPLOY.md`.
 - Nunca marcar un pendiente como resuelto sin evidencia verificable.

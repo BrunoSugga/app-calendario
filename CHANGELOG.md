@@ -4,12 +4,24 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-08-15
+
+### Added
+
+- Versión de la aplicación visible en el menú de ajustes, obtenida de `package.json`.
+- Aviso de nuevas versiones de escritorio mientras la app Tauri permanece abierta,
+  mediante chequeos periódicos y al recuperar foco.
+
 ### Changed
 
 - Profesionalización del flujo documental, gates de CI/CD y runbooks.
 - Deploy web condicionado a CI verde; releases desktop con gate completo.
 - Android CI, CodeQL, Dependabot, CODEOWNERS y validación multiplataforma de versiones.
 - `happy-dom` actualizado a 20.11.2 y `nanoid` corregido en tooling.
+
+### Fixed
+
+- Los recordatorios aplazados vuelven a mostrar el popup cuando vence el snooze.
 
 ## [1.2.1] — 2026-08-15
 

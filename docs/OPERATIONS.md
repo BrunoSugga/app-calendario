@@ -27,6 +27,9 @@ Rollback: volver a desplegar el último commit conocido como sano. No hacer forc
 4. Ejecutar Actions → `Release desktop` con la versión exacta.
 5. Verificar `.exe`, `.msi`, firmas y `latest.json`.
 6. Probar instalación/actualización en una PC no crítica.
+7. Con la app Tauri anterior abierta, verificar que detecte la release sin reiniciarla:
+   chequeo periódico o recuperación de foco, un solo diálogo por versión y actualización
+   seguida de relanzamiento.
 
 Si falla el updater, retirar la release defectuosa y publicar una versión superior corregida; no reemplazar silenciosamente artefactos firmados.
 

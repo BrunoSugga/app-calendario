@@ -164,6 +164,10 @@ export function Sidebar({
               >
                 Salir
               </button>
+              <div className="sidebar-settings-version" aria-label="Versión de la aplicación">
+                <span>Versión</span>
+                <strong>v{import.meta.env.VITE_APP_VERSION}</strong>
+              </div>
             </div>
           )}
         </div>

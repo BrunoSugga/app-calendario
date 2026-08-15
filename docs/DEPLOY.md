@@ -38,6 +38,9 @@ Actualizar este archivo cuando cambie el host, `VITE_BASE`, secrets o redirects 
 
 Archivos: `public/_redirects` (SPA), `public/_headers` (security headers), `wrangler.toml`.
 
+La versión visible en el menú de ajustes se inyecta en build desde `package.json` mediante
+`vite.config.ts`; no mantener una segunda versión manual en el frontend.
+
 ### Gates automatizados
 
 - `ci.yml`: versiones, audit runtime, lint, tests y build.
@@ -52,14 +55,16 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 ## Estado y pendientes
 
-- Web canónica activa y release desktop v1.2.1 publicada.
+- Web canónica activa y release desktop v1.2.2 publicada.
 - Tareas abiertas de Edge Function, APK, tokens y Access: [`PENDIENTES.md`](PENDIENTES.md).
 - Runbooks de publicación/rollback: [`OPERATIONS.md`](OPERATIONS.md).
 
 ## Desktop
 
 - Publicar: Actions → **Release desktop** con la versión alineada a `package.json` / `tauri.conf.json` / `Cargo.toml`.
-- La app instalada (1.0.1+) pregunta al abrir si hay release más nueva (`latest.json` del updater).
+- La app instalada (1.0.1+) consulta `latest.json` al abrir y, mientras siga abierta,
+  cada 30 min o al recuperar foco/visibilidad (cooldown de 5 min). Solo Tauri usa este
+  updater; web y Android no reciben este aviso.
 - Historial de versiones: [`../CHANGELOG.md`](../CHANGELOG.md).
 
 ## Android/iOS

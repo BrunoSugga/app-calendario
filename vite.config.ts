@@ -1,10 +1,17 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { createRequire } from 'node:module'
 
 const host = process.env.TAURI_DEV_HOST
+const { version: appVersion } = createRequire(import.meta.url)('./package.json') as {
+  version: string
+}
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+  },
   clearScreen: false,
   // En GitHub Pages usamos VITE_BASE=/app-calendario/; Tauri y Vercel quedan en '/'
   base: process.env.VITE_BASE || '/',

@@ -98,6 +98,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`.
 - Aplazamientos:
   - **≤12 h** (stepper min/h): solo silencia (`calendario.snooze.*`).
+  - Al vencer, la hora efectiva de aviso es el fin del snooze; el escaneo conserva la ocurrencia original y limpia el snooze después de reabrir el popup.
   - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
@@ -105,20 +106,23 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 ## UI principal
 
-- Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir).
+- Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir y versión visible no interactiva).
 - **Organizador de eventos:** botón junto a “Hoy” que reemplaza la grilla por una lista cronológica con búsqueda y filtros por tipo, calendario, periodicidad y estado. Los eventos simples aparecen una vez; de cada serie se muestra solo la próxima ocurrencia efectiva (o la última si la serie terminó), respetando excepciones. El historial se abre contraído en bloques de 90 días. Editar/eliminar reutiliza el alcance “esta ocurrencia / toda la serie”.
 - Las recurrencias pueden tener una fecha opcional **Finaliza**, persistida como `UNTIL` en el RRULE. Las series existentes sin límite se muestran como “Sin fecha de fin”.
 - En **navegador** (no Tauri ni Capacitor): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
 - **Prefs por dispositivo** (`localStorage` `calendario.device.calendars.v1.<userId>`): calendario predeterminado + visibilidad de “Mis calendarios”. No se sincronizan entre PCs; al crear un evento se usa el predeterminado de *este* dispositivo.
 - **Gestionar calendarios**: modal para crear, renombrar, color, eliminar y restaurar. Al eliminar: descarga obligatoria de respaldo JSON (`calendarBackup`) y opción de mover eventos a otro calendario o borrarlos (recuperables vía restaurar). Import con topes DoS (5 MB / 5000 eventos·excepciones / 10000 task runs).
 - Semana laboral: modal para calendario laboral, días L–D, horario (default L–V 08:00–17:00) y “No molestar fuera del horario laboral”.
-- Updater desktop vía GitHub Releases (`release.yml`).
+- Updater **solo desktop Tauri** vía GitHub Releases (`release.yml`): chequeo inicial a
+  los 2,5 s, periódico cada 30 min mientras la app está visible y al recuperar
+  foco/visibilidad (con cooldown de 5 min). La misma versión se pregunta una sola vez
+  por sesión; web y Android no usan este updater.
 
 ## Escritorio (Tauri)
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.1** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.2** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

@@ -8,6 +8,7 @@ import {
   reminderFireKey,
   reminderScanRange,
   reminderScanRangeWithWorkWeek,
+  reminderSnoozeLookback,
   selectDueReminders,
   shouldCommitReminderLastScan,
 } from './reminders'
@@ -62,6 +63,16 @@ describe('reminderScanRange', () => {
     const lastScan = new Date('2026-07-20T10:00:00.000-03:00')
     const range = reminderScanRangeWithWorkWeek(now, null, 5, 24, lastScan)
     expect(range.start.getTime()).toBe(lastScan.getTime())
+  })
+
+  it('conserva en el scan la ocurrencia original mientras hay un snooze relevante', () => {
+    const now = new Date('2026-08-08T19:17:10.000-03:00')
+    const snoozedUntil = new Date('2026-08-08T19:17:00.000-03:00')
+    const lookback = reminderSnoozeLookback([snoozedUntil.getTime()], now)
+
+    expect(lookback?.getTime()).toBe(
+      new Date('2026-08-08T07:17:00.000-03:00').getTime(),
+    )
   })
 })
 
@@ -208,6 +219,20 @@ describe('isOccurrenceDueForReminder', () => {
         snoozeActive: () => true,
       }),
     ).toBe(false)
+  })
+
+  it('vuelve a disparar al vencer el snooze aunque lastScan haya avanzado', () => {
+    const startsAt = new Date('2026-08-08T13:17:00.000-03:00')
+    const snoozedUntil = new Date('2026-08-08T13:22:00.000-03:00')
+    const lastScan = new Date('2026-08-08T13:21:55.000-03:00')
+    const now = new Date('2026-08-08T13:22:10.000-03:00')
+
+    expect(
+      isOccurrenceDueForReminder(occ({ startsAt, reminderMinutes: 0 }), now, {
+        lastScan,
+        snoozeUntil: () => snoozedUntil.getTime(),
+      }),
+    ).toBe(true)
   })
 })
 

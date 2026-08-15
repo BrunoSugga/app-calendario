@@ -42,7 +42,7 @@ Esta batería complementa, no reemplaza, `npm test`.
 | Persistencia local | repositorio local, localStorage, backups |
 | Seguridad cliente | sanitización, contraseñas, redirects, PKCE, config móvil |
 | UI | login, EventModal, Toolbar, OrganizerView |
-| Bridges | Tauri y avisos nativos |
+| Bridges | Tauri, updater desktop y avisos nativos |
 
 ## Tests obligatorios según cambio
 
@@ -53,6 +53,8 @@ Esta batería complementa, no reemplaza, `npm test`.
 - Repositorios: éxito, error, concurrencia/realtime y aislamiento por usuario.
 - UI: estado vacío, error, loading, teclado, móvil y acción destructiva.
 - Tauri/Capacitor: config estática más smoke manual en la plataforma.
+- Updater Tauri: timers inicial/periódico, foco/visibilidad, deduplicación, errores y
+  aceptación de descarga/relaunch; completar con smoke contra una release firmada.
 
 ## Controles manuales
 
