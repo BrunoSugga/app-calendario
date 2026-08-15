@@ -8,9 +8,9 @@ alwaysApply: true
 Antes de implementar o proponer cambios:
 
 1. Leé `AGENTS.md`.
-2. Leé `docs/ARCHITECTURE.md`.
-3. Si tocás auth, RLS, invites, roles o secrets: `docs/SECURITY.md`.
-4. Si tocás hosting, env, CSP headers o redirects: `docs/DEPLOY.md`.
+2. Leé `docs/INDEX.md`, `docs/ARCHITECTURE.md` y `docs/PENDIENTES.md`.
+3. Seguí la matriz de `docs/INDEX.md` según el área modificada.
+4. Si tocás auth/Supabase, aplicá también `security-supabase.mdc`.
 
 Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deploy.
 
@@ -21,15 +21,13 @@ Actualizá esos archivos cuando el cambio altere arquitectura, seguridad o deplo
 - Modo local ≠ seguridad multi-usuario.
 - Responder en español al usuario.
 - No commits salvo pedido explícito.
+- Toda implementación debe cumplir `.cursor/rules/01-quality-security-gate.mdc` antes de entregarse.
 
-## Recordatorios operativos (2026-08-15)
+## Fuentes canónicas
 
-- **Código en GitHub `main`:** v1.2.1 (Organizador + fin de recurrencias + Capacitor). Usuarios: web live + desktop actualizable a **v1.2.1**. APK **no** probada.
-- Web canónica: `https://calendario.bmatrix.org`. Fallback: `bmx-calendario.pages.dev`.
-- Site URL Supabase = `https://calendario.bmatrix.org`.
-- Invites: redirect público (`VITE_PUBLIC_APP_URL`); nunca `tauri.localhost` ni `https://localhost`. Redeploy de `invite-user` **pendiente**.
-- Avisos: `docs/ARCHITECTURE.md` § Avisos; popups en web; nativos en Android (falta probar en dispositivo).
-- Siguiente sesión: APK en Android Studio (`npx cap sync` / `npx cap open android`). Detalle en `AGENTS.md` § Pendiente.
-- `email rate limit exceeded` = cooldown Supabase free; no spamear invites.
-- Probar invites en incógnito.
-- Sidebar: rueda de ajustes (Gestionar calendarios / Semana laboral / Invitar admin / Salir). Prefs de calendario por dispositivo.
+- Estado y próximos pasos: `docs/PENDIENTES.md`.
+- Seguridad y auth: `docs/SECURITY.md`.
+- Entornos y secretos: `docs/ENV.md`.
+- Publicación y operación: `docs/DEPLOY.md` + `docs/OPERATIONS.md`.
+- APK/iOS: `docs/MOBILE.md`.
+- Tests y auditorías: `docs/TESTING.md`.

@@ -11,6 +11,20 @@ Documento vivo. Actualizar cuando cambie auth, RLS, invites o políticas.
 5. Modo local no es modelo de seguridad multi-usuario.
 6. Links de invite/recovery **no** deben reutilizar la sesión de otro usuario en el mismo navegador.
 
+## Modelo de amenazas resumido
+
+| Activo | Amenazas principales | Controles |
+|---|---|---|
+| Sesión/identidad | robo o confusión de sesión, redirect malicioso | PKCE, consumo manual, allowlist |
+| Datos de calendario | lectura/escritura cruzada | RLS, constraints, ownership |
+| Roles/admin | elevación de privilegios | trigger de rol, Edge Function con verificación |
+| Backups/imports | DoS, IDs ajenos, path traversal | límites, remapeo, sanitización |
+| Notificaciones | fuga en lock screen o payload | contenido mínimo, canal PRIVATE |
+| Builds/secretos | `service_role`, tokens o claves en bundle | anon-only, gitignore, tests y audits |
+| Supply chain | dependencia o Action vulnerable | lockfiles, audit, Dependabot, CodeQL |
+
+Fronteras de confianza: navegador/WebView no confiable → Supabase RLS; cliente admin → Edge Function autenticada; CI → proveedores mediante secrets de mínimo alcance.
+
 ---
 
 ## Flujo auth (implementado)
@@ -103,9 +117,7 @@ sequenceDiagram
 
 ## Tests
 
-```bash
-npm test
-```
+Comandos, batería específica y Definition of Done: [`TESTING.md`](TESTING.md).
 
 - `security.test.ts` — password, emails, sanitización, CSP no se aplica en Capacitor.
 - `authLink.test.ts` — sesión, token_hash, PKCE, allowlist de redirects (Capacitor/Tauri).
@@ -114,23 +126,13 @@ npm test
 - `calendarBackup.test.ts` — export/import, topes de tamaño y arrays.
 - `LoginPage.test.tsx` — cloud sin signup público.
 
+El gate canónico está en `.cursor/rules/01-quality-security-gate.mdc`. Un pentest requiere alcance, entorno/cuentas, autorización y reporte; no probar técnicas invasivas contra producción.
+
 ---
 
-## Checklist operativo
+## Estado operativo
 
-- [x] Migraciones 005/006
-- [x] Edge Function deployada (invite + recovery resent)
-- [x] Signup público off
-- [x] Cloudflare Pages live
-- [x] `calendario.bmatrix.org` Active
-- [x] Site URL = `https://calendario.bmatrix.org` (verificar en dashboard si hay fallos de mail)
-- [x] Invite OK desde navegador; escritorio usa redirect público (v1.0.8+)
-- [x] Baseline primeros usuarios **v1.1.0**
-- [x] Allowlist Auth en cliente (v1.2.0, `main`)
-- [ ] Redeploy `invite-user` con la misma allowlist
-- [ ] Checklist manual APK (abajo)
-- [ ] Rotar tokens pegados en chat (si aplica)
-- [ ] (Opcional) Cloudflare Access
+Los pendientes de seguridad, Edge Function y APK se mantienen únicamente en [`PENDIENTES.md`](PENDIENTES.md). Runbooks: [`OPERATIONS.md`](OPERATIONS.md).
 
 ## Móvil (Capacitor)
 
@@ -139,18 +141,9 @@ npm test
 - Notificaciones: canal `PRIVATE`; extras validados (`isSafeId` / `isSafeIsoDate`); sin descripción en el texto visible.
 - Superficie nativa mínima: App, Keyboard, StatusBar, LocalNotifications. Sin custom URL scheme de Auth en v1.
 - Logout de la app borra la sesión del WebView.
-
-### Checklist manual APK (pendiente — no corrida aún)
-
-- Invite desde la APK (admin) → el mail apunta a `calendario.bmatrix.org`, no a localhost.
-- Logout; otro usuario en el mismo teléfono no hereda la cuenta.
-- Lock screen no muestra la descripción del evento.
-- Spot-check del APK (`strings`) sin `service_role`.
-- Aviso con la app cerrada / en segundo plano (y tras reboot, abrir una vez).
+- Guía y checklist canónicos: [`MOBILE.md`](MOBILE.md).
 
 ## Deuda menor
 
-- CORS Edge Function `*`.
-- Cloudflare Access (después).
-- Rate limit propio de invites (nice-to-have; hoy manda Supabase free).
 - UI admin para borrar usuarios (hoy solo Dashboard).
+- Deuda operativa y de hardening: [`PENDIENTES.md`](PENDIENTES.md).

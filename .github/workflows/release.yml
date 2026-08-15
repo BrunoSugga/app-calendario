@@ -11,8 +11,13 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
 jobs:
   release-windows:
+    if: github.ref == 'refs/heads/main'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -27,6 +32,27 @@ jobs:
 
       - name: Install frontend deps
         run: npm ci
+
+      - name: Validate version
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          npm run check:versions
+          if ($env:EXPECTED_VERSION -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version input must use numeric semver (for example 1.2.1)"
+          }
+          $packageVersion = node -p "require('./package.json').version"
+          if ($packageVersion -ne $env:EXPECTED_VERSION) {
+            throw "Input version does not match package.json"
+          }
+
+      - name: Quality gate
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm run lint
+          npm test
+          npm run build
 
       - name: Build and publish
         uses: tauri-apps/tauri-action@v0

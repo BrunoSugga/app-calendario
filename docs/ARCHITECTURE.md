@@ -50,6 +50,8 @@ ios/                   esqueleto Xcode (sin IPA en Windows)
 docs/                  contexto del proyecto (leer al inicio de sesión)
 ```
 
+Mapa y responsabilidad de cada documento: `docs/INDEX.md`. Estado operativo únicamente en `docs/PENDIENTES.md`.
+
 ## Datos (cloud)
 
 Tablas principales (todas con RLS):

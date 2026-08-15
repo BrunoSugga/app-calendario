@@ -7,6 +7,7 @@ alwaysApply: false
 # Seguridad / Auth
 
 - Seguí `docs/SECURITY.md`.
+- Para esquema/RLS/migraciones, seguí también `docs/DATABASE.md`.
 - Invite/recovery: `src/lib/authLink.ts` (signOut local antes de aplicar el token del mail).
 - Errores de Edge Function: parsear `FunctionsHttpError.context` (`invite.ts`); no dejar solo “non-2xx”.
 - User ya existe → recovery resent en `invite-user`, no fallar opaco.
@@ -15,6 +16,7 @@ alwaysApply: false
 - Signup cloud off; invites cualquier email válido.
 - `assertCloudPassword`: mín. 8 + letra y número.
 - Cliente: anon + PKCE; `detectSessionInUrl=false`.
-- Site URL debe ser un host que responda (pages.dev si custom está Verifying).
+- Site URL canónica: `https://calendario.bmatrix.org`.
 - Redirects de invite: allowlist (`calendario.bmatrix.org`, `bmx-calendario.pages.dev`, `localhost:5173`). Nunca `https://localhost` ni cualquier `https:`.
-- Ante cambios auth: `npm test`.
+- Ante cambios auth: gate completo de `docs/TESTING.md` + casos no-admin, redirect rechazado y sesión previa.
+- Deploy/redeploy solo con el runbook de `docs/OPERATIONS.md`; registrar pendientes en `docs/PENDIENTES.md`.

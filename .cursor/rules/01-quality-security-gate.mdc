@@ -1,0 +1,20 @@
+---
+description: Gate obligatorio de calidad y seguridad para cada implementación
+alwaysApply: true
+---
+
+# Gate de cierre
+
+Antes de cerrar cualquier implementación de código:
+
+1. Evaluar impacto en auth, autorización/RLS, datos, inputs, red, secretos, deploy y superficies Tauri/Capacitor.
+2. Ejecutar `npm run check:versions` y todos los controles aplicables de `docs/TESTING.md`.
+3. Clasificar auditorías como runtime vs. tooling y ejecutar la batería específica de seguridad.
+4. Agregar o actualizar tests cuando cambie comportamiento; cubrir regresión, límites, errores e inputs hostiles relevantes.
+5. Verificar que frontend, bundles y configs no incorporen `service_role`, credenciales, tokens ni datos sensibles.
+6. Si cambia auth, RLS, Edge Functions, imports, redirects, CSP, storage o código nativo: hacer revisión de seguridad específica y actualizar `docs/SECURITY.md`.
+7. Un pentest real solo se ejecuta con alcance, entorno y autorización explícitos; nunca afirmar que tests/lint equivalen a pentesting.
+8. Informar al usuario qué controles se ejecutaron, resultados, advertencias y cualquier control pendiente.
+9. No publicar con CI rojo, versiones desalineadas, secretos expuestos o un hallazgo runtime alto/crítico sin aceptación explícita.
+
+Para cambios solo documentales, ejecutar al menos validación del diff y omitir comandos no aplicables explicando el motivo.

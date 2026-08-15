@@ -3,8 +3,12 @@
   "private": true,
   "version": "1.2.1",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite",
+    "check:versions": "node check-versions.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
@@ -49,7 +53,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "esbuild": "^0.28.1",
-    "happy-dom": "^18.0.1",
+    "happy-dom": "^20.11.2",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",

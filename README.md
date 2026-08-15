@@ -8,24 +8,15 @@ Aplicación de calendario estilo Outlook con:
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
-**Producción:** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · escritorio instalado **v1.1.5** · código **v1.2.0** en `main` (APK Capacitor lista para armar; aún no distribuida).
+**Producción:** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · web y escritorio **v1.2.1** · APK Capacitor aún no distribuida.
 
 ## Contexto del proyecto (agentes y humanos)
 
-Antes de trabajar en el repo, consultá:
-
-| Doc | Contenido |
-|-----|-----------|
-| [`AGENTS.md`](AGENTS.md) | Obligatorio al inicio de cada sesión de agente; cuándo actualizar docs |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Stack, modos cloud/local, mapa de carpetas |
-| [`docs/SECURITY.md`](docs/SECURITY.md) | Plan de seguridad: admin, invites, RLS, PKCE, Edge Functions |
-| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Cloudflare Pages (objetivo) y legado GitHub Pages |
-
-Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
+Antes de trabajar, leer [`AGENTS.md`](AGENTS.md) y [`docs/INDEX.md`](docs/INDEX.md). El índice enlaza arquitectura, seguridad, testing, entornos, base de datos, mobile, deploy, operaciones y pendientes sin duplicar fuentes.
 
 ## Requisitos
 
-- Node.js 20+ (CI usa Node 24)
+- Node.js 22+ (CI usa Node 24)
 - Para escritorio: [Rust](https://rustup.rs/) y **Visual Studio Build Tools 2022** con workload “Desktop development with C++” (MSVC)
 - Para Android: [Android Studio](https://developer.android.com/studio) (SDK 36, min 26) + JDK 21
 - Proyecto [Supabase](https://supabase.com) (opcional para sync)
@@ -40,6 +31,7 @@ Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
    - [`supabase/migrations/004_task_runs_hardening.sql`](supabase/migrations/004_task_runs_hardening.sql) (RLS más estricto en historial de tareas)
    - [`supabase/migrations/005_admin_invites.sql`](supabase/migrations/005_admin_invites.sql) (rol admin + seed)
    - [`supabase/migrations/006_rls_hardening.sql`](supabase/migrations/006_rls_hardening.sql) (policies + CHECKs)
+   - [`supabase/migrations/007_work_week_settings.sql`](supabase/migrations/007_work_week_settings.sql) (semana laboral sincronizada)
 3. Desplegá la Edge Function `invite-user` (`supabase/functions/invite-user`).
 4. En Auth → Providers → Email: **desactivá signups públicos**.
 5. Copiá `.env.example` a `.env` y completá:
@@ -47,9 +39,10 @@ Reglas Cursor: `.cursor/rules/` (always-apply + seguridad).
 ```env
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_PUBLIC_APP_URL=https://calendario.bmatrix.org
 ```
 
-Sin esas variables, la app arranca en **modo local**.
+Sin las variables Supabase, la app arranca en **modo local**. Referencia completa: [`docs/ENV.md`](docs/ENV.md).
 
 ## Producción (web)
 
@@ -57,7 +50,7 @@ Deploy en **Cloudflare Pages** (GitHub Pages apagado). Detalle: [`docs/DEPLOY.md
 
 - **URL canónica:** https://calendario.bmatrix.org  
 - **Fallback Pages:** https://bmx-calendario.pages.dev  
-- Workflow: `Deploy Cloudflare Pages` (push a `main`)
+- Workflow: `Deploy Cloudflare Pages` después de que CI termine correctamente en `main`
 - Secrets CI: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 
 En Supabase → **Authentication → URL Configuration**:
@@ -75,19 +68,25 @@ Si ves `email rate limit exceeded`, esperá 30–60 min (límite free de Supabas
 ## Desarrollo
 
 ```bash
-npm install
+npm ci
 npm run dev          # solo web
 npm run tauri:dev    # web + escritorio Tauri
 npm run cap:sync     # build web + sync a android/ e ios/
 ```
 
+Guía completa: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
 ## Tests y calidad
 
 ```bash
-npm test             # Vitest (dominio + localStore)
+npm run check:versions
+npm test
 npm run lint         # oxlint
 npm run build        # typecheck + bundle web
+npm audit --omit=dev
 ```
+
+Definition of Done y baterías específicas: [`docs/TESTING.md`](docs/TESTING.md).
 
 ## Build
 
@@ -98,33 +97,22 @@ npm run tauri:build
 
 El build de escritorio genera instaladores Windows (NSIS `.exe` y MSI) en `src-tauri/target/release/bundle/`.
 
-## Android (APK sideload)
+## Android/iOS
 
-El código ya está en GitHub (`main`). Falta compilarla en una PC con Android Studio:
-
-```bash
-git pull
-npm install
-npm run cap:sync
-npx cap open android         # Android Studio
-npx cap run android          # debug en dispositivo/emulador
-npm run android:apk          # assembleRelease (hace falta keystore)
-```
-
-Detalle de firma, permisos y que los invites **no** usen `https://localhost`: [`docs/DEPLOY.md`](docs/DEPLOY.md). iOS queda como esqueleto (`ios/`); el IPA requiere Mac + cuenta Apple.
+Preparación, hallazgos de dependencias, seguridad, firma y checklist de dispositivo: [`docs/MOBILE.md`](docs/MOBILE.md). Las tareas abiertas están únicamente en [`docs/PENDIENTES.md`](docs/PENDIENTES.md).
 
 ## Actualizaciones automáticas (escritorio)
 
 La app de escritorio usa el updater de Tauri + GitHub Releases.
 
 1. Al abrir, si hay una versión nueva pregunta si querés actualizar.
-2. Para publicar: Actions → **Release desktop** → Run workflow con la versión (ej. `1.0.1`).
+2. Para publicar: Actions → **Release desktop** → Run workflow con la versión exacta (actual: `1.2.1`).
 3. Secretos requeridos en GitHub:
    - `TAURI_SIGNING_PRIVATE_KEY` (contenido de `.tauri/bmx-calendario.key`)
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene password)
    - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
 
-La primera vez hay que instalar el `.exe` con updater (1.0.1+). Después se actualiza sola.
+La primera vez hay que instalar un `.exe` con updater. Después se actualiza sola. Runbook: [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ## Uso rápido
 
