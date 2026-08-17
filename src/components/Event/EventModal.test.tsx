@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Calendar } from '../../types'
@@ -125,6 +125,65 @@ describe('EventModal', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onSave.mock.calls[0][0].rrule).toContain('UNTIL=')
+  })
+
+  it('guarda una repetición mensual por día del mes', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(
+      <EventModal
+        open
+        calendars={calendars}
+        onClose={vi.fn()}
+        onSave={onSave}
+        initial={{
+          calendar_id: 'cal-1',
+          starts_at: '2026-08-05T10:00:00.000Z',
+          ends_at: '2026-08-05T11:00:00.000Z',
+        }}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/Título/i), 'Vencimiento')
+    await user.selectOptions(screen.getByLabelText(/Repetición/i), 'monthly-date')
+
+    const monthDay = screen.getByRole('spinbutton', { name: /Día del mes/i })
+    expect(monthDay).toHaveValue(5)
+    expect(screen.queryByText(/Días de la semana/i)).not.toBeInTheDocument()
+    await user.clear(monthDay)
+    await user.type(monthDay, '16')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0][0].rrule).toContain('FREQ=MONTHLY')
+    expect(onSave.mock.calls[0][0].rrule).toContain('BYMONTHDAY=16')
+  })
+
+  it('valida el rango del día mensual', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+    render(
+      <EventModal
+        open
+        calendars={calendars}
+        onClose={vi.fn()}
+        onSave={onSave}
+        initial={{
+          calendar_id: 'cal-1',
+          starts_at: '2026-08-05T10:00:00.000Z',
+          ends_at: '2026-08-05T11:00:00.000Z',
+        }}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/Título/i), 'Serie inválida')
+    await user.selectOptions(screen.getByLabelText(/Repetición/i), 'monthly-date')
+    const monthDay = screen.getByRole('spinbutton', { name: /Día del mes/i })
+    fireEvent.change(monthDay, { target: { value: '32' } })
+    fireEvent.submit(monthDay.closest('form')!)
+
+    expect(screen.getByText(/debe estar entre 1 y 31/i)).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
   })
 
   it('rechaza una finalización anterior al inicio', async () => {

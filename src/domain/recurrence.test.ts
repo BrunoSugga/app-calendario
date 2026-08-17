@@ -5,6 +5,7 @@ import {
   expandOccurrences,
   jsDateToWeekdayIndex,
   labelForRRule,
+  monthDayFromRRule,
   presetFromRRule,
   recurrenceEndFromRRule,
   weekdaysFromRRule,
@@ -69,6 +70,12 @@ describe('recurrence helpers', () => {
     const monthly = buildRRule('monthly', new Date(2026, 7, 3, 10), [1])
     expect(monthly).toContain('FREQ=MONTHLY')
     expect(presetFromRRule(monthly)).toBe('monthly')
+
+    const monthlyDate = buildRRule('monthly-date', new Date(2026, 7, 16, 10), [], null, 16)
+    expect(monthlyDate).toContain('FREQ=MONTHLY')
+    expect(monthlyDate).toContain('BYMONTHDAY=16')
+    expect(presetFromRRule(monthlyDate)).toBe('monthly-date')
+    expect(monthDayFromRRule(monthlyDate)).toBe(16)
   })
 
   it('labelForRRule describe la repetición en español', () => {
@@ -78,6 +85,9 @@ describe('recurrence helpers', () => {
     expect(labelForRRule(weekly)).toContain('Semanalmente')
     expect(labelForRRule(weekly)).toContain('Lu')
     expect(labelForRRule(weekly)).toContain('Mi')
+    expect(
+      labelForRRule(buildRRule('monthly-date', new Date(2026, 7, 16), [], null, 16)),
+    ).toBe('Mensualmente (día 16)')
   })
 
   it('conserva y lee la fecha de finalización', () => {
@@ -176,6 +186,118 @@ describe('expandOccurrences', () => {
     expect(moved?.title).toBe('Standup movido')
     expect(moved?.startsAt.toISOString()).toBe('2026-08-05T11:00:00.000Z')
     expect(moved?.reminderMinutes).toBe(5)
+  })
+
+  it('repite por día del mes y usa el último día en meses cortos', () => {
+    const startsAt = new Date('2026-01-31T10:00:00.000Z')
+    const master = event({
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-01-31T10:30:00.000Z',
+      rrule: buildRRule('monthly-date', startsAt, [], null, 31),
+    })
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date('2026-01-01T00:00:00.000Z'),
+      new Date('2026-04-30T23:59:59.999Z'),
+    )
+
+    expect(occ.map((item) => item.originalStartsAt.toISOString())).toEqual([
+      '2026-01-31T10:00:00.000Z',
+      '2026-02-28T10:00:00.000Z',
+      '2026-03-31T10:00:00.000Z',
+      '2026-04-30T10:00:00.000Z',
+    ])
+  })
+
+  it('no agrega el último día cuando el día solicitado existe', () => {
+    const startsAt = new Date('2026-01-30T10:00:00.000Z')
+    const master = event({
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-01-30T10:30:00.000Z',
+      rrule: buildRRule('monthly-date', startsAt, [], null, 30),
+    })
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date('2026-02-01T00:00:00.000Z'),
+      new Date('2026-03-31T23:59:59.999Z'),
+    )
+
+    expect(occ.map((item) => item.originalStartsAt.toISOString())).toEqual([
+      '2026-02-28T10:00:00.000Z',
+      '2026-03-30T10:00:00.000Z',
+    ])
+  })
+
+  it('conserva el día y la hora locales aunque DTSTART cambie de fecha en UTC', () => {
+    const startsAt = new Date(2026, 0, 31, 23, 30)
+    const master = event({
+      starts_at: startsAt.toISOString(),
+      ends_at: new Date(2026, 1, 1, 0, 0).toISOString(),
+      rrule: buildRRule('monthly-date', startsAt, [], null, 31),
+    })
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date(2026, 0, 1),
+      new Date(2026, 2, 31, 23, 59, 59, 999),
+    )
+
+    expect(occ.map((item) => [item.startsAt.getMonth(), item.startsAt.getDate()])).toEqual([
+      [0, 31],
+      [1, 28],
+      [2, 31],
+    ])
+    expect(occ.every((item) => item.startsAt.getHours() === 23)).toBe(true)
+    expect(occ.every((item) => item.startsAt.getMinutes() === 30)).toBe(true)
+  })
+
+  it('respeta UNTIL y excepciones en ocurrencias ajustadas al último día', () => {
+    const startsAt = new Date('2026-01-31T10:00:00.000Z')
+    const master = event({
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-01-31T10:30:00.000Z',
+      rrule: buildRRule(
+        'monthly-date',
+        startsAt,
+        [],
+        new Date('2026-03-15T23:59:59.000Z'),
+        31,
+      ),
+    })
+    const cancel: EventException = {
+      id: 'ex-monthly-date',
+      event_id: master.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-02-28T10:00:00.000Z',
+      is_cancelled: true,
+      title: null,
+      description: null,
+      starts_at: null,
+      ends_at: null,
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+    }
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [cancel],
+      new Date('2026-01-01T00:00:00.000Z'),
+      new Date('2026-04-30T23:59:59.999Z'),
+    )
+
+    expect(occ.map((item) => item.originalStartsAt.toISOString())).toEqual([
+      '2026-01-31T10:00:00.000Z',
+    ])
   })
 
   it('ordena por hora de inicio', () => {

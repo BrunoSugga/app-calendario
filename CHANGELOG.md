@@ -4,6 +4,13 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.3] — 2026-08-17
+
+### Added
+
+- Repetición mensual por día del mes, conservando el modo mensual por días de semana.
+- Los días 29, 30 y 31 se ajustan al último día disponible en los meses más cortos.
+
 ## [1.2.2] — 2026-08-15
 
 ### Added

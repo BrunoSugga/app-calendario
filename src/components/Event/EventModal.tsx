@@ -12,6 +12,7 @@ import {
   WEEKDAY_OPTIONS,
   buildRRule,
   jsDateToWeekdayIndex,
+  monthDayFromRRule,
   presetFromRRule,
   recurrenceEndFromRRule,
   weekdaysFromRRule,
@@ -68,6 +69,7 @@ export function EventModal({
   const [reminder, setReminder] = useState(15)
   const [recurrence, setRecurrence] = useState<RecurrencePreset>('none')
   const [weekdays, setWeekdays] = useState<WeekdayIndex[]>([])
+  const [monthDay, setMonthDay] = useState('')
   const [recurrenceUntil, setRecurrenceUntil] = useState('')
   const [editScope, setEditScope] = useState<'single' | 'series'>('series')
   const [completeNote, setCompleteNote] = useState('')
@@ -111,6 +113,7 @@ export function EventModal({
     setReminder(initial?.reminder_minutes ?? initial?.occurrence?.reminderMinutes ?? 15)
     setRecurrence(presetFromRRule(rrule))
     setWeekdays(weekdaysFromRRule(rrule, start))
+    setMonthDay(String(monthDayFromRRule(rrule, start) ?? start.getDate()))
     setRecurrenceUntil(toLocalDateInput(recurrenceEndFromRRule(rrule, start)))
     setEditScope(isRecurring ? 'single' : 'series')
     setCompleteNote(initial?.master?.task_note ?? '')
@@ -136,6 +139,10 @@ export function EventModal({
         return [jsDateToWeekdayIndex(start)]
       })
     }
+    if (value === 'monthly-date') {
+      const start = startsAt ? new Date(startsAt) : new Date()
+      setMonthDay(String(start.getDate()))
+    }
   }
 
   if (!open) return null
@@ -148,6 +155,14 @@ export function EventModal({
     }
     if (showDayPicker && weekdays.length === 0) {
       setError('Elegí al menos un día de la semana')
+      return
+    }
+    const selectedMonthDay = Number(monthDay)
+    if (
+      recurrence === 'monthly-date' &&
+      (!Number.isInteger(selectedMonthDay) || selectedMonthDay < 1 || selectedMonthDay > 31)
+    ) {
+      setError('El día del mes debe estar entre 1 y 31')
       return
     }
     const startDate = new Date(startsAt)
@@ -167,7 +182,7 @@ export function EventModal({
       const rrule =
         isEdit && editScope === 'single'
           ? initial?.master?.rrule ?? null
-          : buildRRule(recurrence, startDate, weekdays, untilDate)
+          : buildRRule(recurrence, startDate, weekdays, untilDate, selectedMonthDay)
 
       await onSave({
         id: initial?.id,
@@ -311,6 +326,7 @@ export function EventModal({
                 <option value="daily">Diariamente</option>
                 <option value="weekly">Semanalmente</option>
                 <option value="monthly">Mensualmente</option>
+                <option value="monthly-date">Mensualmente por día del mes</option>
               </select>
             </label>
 
@@ -335,6 +351,23 @@ export function EventModal({
                   })}
                 </div>
               </fieldset>
+            )}
+
+            {recurrence === 'monthly-date' && (
+              <label>
+                Día del mes
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  step={1}
+                  value={monthDay}
+                  onChange={(e) => setMonthDay(e.target.value)}
+                />
+                <span className="field-hint">
+                  En meses más cortos se usará el último día disponible.
+                </span>
+              </label>
             )}
 
             {recurrence !== 'none' && (

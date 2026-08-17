@@ -2,7 +2,7 @@ import { addMilliseconds, differenceInMilliseconds } from 'date-fns'
 import { Frequency, RRule, Weekday, rrulestr } from 'rrule'
 import type { Calendar, CalendarEvent, EventException, Occurrence } from '../types'
 
-export type RecurrencePreset = 'none' | 'daily' | 'weekly' | 'monthly'
+export type RecurrencePreset = 'none' | 'daily' | 'weekly' | 'monthly' | 'monthly-date'
 
 /** Índices estilo rrule: 0=LU … 6=DO */
 export type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -28,6 +28,7 @@ export function buildRRule(
   startsAt: Date,
   weekdays: WeekdayIndex[] = [],
   until?: Date | null,
+  monthDay?: number,
 ): string | null {
   if (preset === 'none') return null
 
@@ -36,6 +37,19 @@ export function buildRRule(
       freq: Frequency.DAILY,
       dtstart: startsAt,
       until: until ?? undefined,
+    }).toString()
+  }
+
+  if (preset === 'monthly-date') {
+    const selectedMonthDay =
+      Number.isInteger(monthDay) && monthDay! >= 1 && monthDay! <= 31
+        ? monthDay!
+        : startsAt.getDate()
+    return new RRule({
+      freq: Frequency.MONTHLY,
+      dtstart: startsAt,
+      until: until ?? undefined,
+      bymonthday: selectedMonthDay,
     }).toString()
   }
 
@@ -65,8 +79,21 @@ export function presetFromRRule(rrule: string | null): RecurrencePreset {
   if (!rrule) return 'none'
   if (rrule.includes('FREQ=DAILY')) return 'daily'
   if (rrule.includes('FREQ=WEEKLY')) return 'weekly'
+  if (rrule.includes('FREQ=MONTHLY') && monthDayFromRRule(rrule) !== null) {
+    return 'monthly-date'
+  }
   if (rrule.includes('FREQ=MONTHLY')) return 'monthly'
   return 'none'
+}
+
+export function monthDayFromRRule(rrule: string | null, fallbackDate?: Date): number | null {
+  if (!rrule) return fallbackDate?.getDate() ?? null
+  const match = /(?:^|[;\n])BYMONTHDAY=(\d{1,2})(?:[;\r\n]|$)/i.exec(rrule)
+  if (!match) return fallbackDate?.getDate() ?? null
+  const day = Number(match[1])
+  return Number.isInteger(day) && day >= 1 && day <= 31
+    ? day
+    : fallbackDate?.getDate() ?? null
 }
 
 export function weekdaysFromRRule(rrule: string | null, fallbackDate?: Date): WeekdayIndex[] {
@@ -121,6 +148,10 @@ export function labelForRRule(rrule: string | null): string | null {
   const preset = presetFromRRule(rrule)
   if (preset === 'none') return null
   if (preset === 'daily') return 'Diariamente'
+  if (preset === 'monthly-date') {
+    const monthDay = monthDayFromRRule(rrule)
+    return monthDay ? `Mensualmente (día ${monthDay})` : 'Mensualmente por día del mes'
+  }
 
   const days = weekdaysFromRRule(rrule)
   const dayLabels = days
@@ -132,6 +163,60 @@ export function labelForRRule(rrule: string | null): string | null {
     return dayLabels ? `Semanalmente (${dayLabels})` : 'Semanalmente'
   }
   return dayLabels ? `Mensualmente (${dayLabels})` : 'Mensualmente'
+}
+
+function monthlyDateOccurrences(
+  rule: RRule,
+  startsAt: Date,
+  rangeStart: Date,
+  rangeEnd: Date,
+  monthDay: number,
+): Date[] {
+  const dates: Date[] = []
+  const until = rule.options.until?.getTime() ?? Number.POSITIVE_INFINITY
+  const interval = Math.max(1, rule.origOptions.interval ?? 1)
+  const count = rule.origOptions.count ?? Number.POSITIVE_INFINITY
+  const startMonthIndex = startsAt.getFullYear() * 12 + startsAt.getMonth()
+  let year = rangeStart.getFullYear()
+  let month = rangeStart.getMonth()
+  const endYear = rangeEnd.getFullYear()
+  const endMonth = rangeEnd.getMonth()
+
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    const monthIndex = year * 12 + month
+    const monthsSinceStart = monthIndex - startMonthIndex
+    if (monthsSinceStart >= 0 && monthsSinceStart % interval === 0) {
+      const occurrenceNumber = Math.floor(monthsSinceStart / interval) + 1
+      if (occurrenceNumber > count) break
+      const lastDay = new Date(year, month + 1, 0).getDate()
+      const candidate = new Date(
+        year,
+        month,
+        Math.min(monthDay, lastDay),
+        startsAt.getHours(),
+        startsAt.getMinutes(),
+        startsAt.getSeconds(),
+        startsAt.getMilliseconds(),
+      )
+      const timestamp = candidate.getTime()
+      if (
+        timestamp >= startsAt.getTime() &&
+        timestamp >= rangeStart.getTime() &&
+        timestamp <= rangeEnd.getTime() &&
+        timestamp <= until
+      ) {
+        dates.push(candidate)
+      }
+    }
+
+    month += 1
+    if (month === 12) {
+      month = 0
+      year += 1
+    }
+  }
+
+  return dates
 }
 
 function expandMaster(
@@ -184,7 +269,11 @@ function expandMaster(
     return []
   }
 
-  const dates = rule.between(rangeStart, rangeEnd, true)
+  const monthDay = monthDayFromRRule(event.rrule)
+  const dates =
+    monthDay !== null && presetFromRRule(event.rrule) === 'monthly-date'
+      ? monthlyDateOccurrences(rule, new Date(event.starts_at), rangeStart, rangeEnd, monthDay)
+      : rule.between(rangeStart, rangeEnd, true)
   const occurrences: Occurrence[] = []
 
   for (const original of dates) {
