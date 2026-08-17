@@ -12,7 +12,7 @@ Actualizar este archivo cuando cambie el host, `VITE_BASE`, secrets o redirects 
 
 - Proyecto Cloudflare Pages: **`bmx-calendario`**
 - Custom domain `calendario.bmatrix.org`: **Active** (2026-08-08)
-- Workflow: `.github/workflows/deploy-cloudflare.yml` (solo después de CI exitoso en `main`)
+- Workflow: `.github/workflows/deploy-cloudflare.yml` (solo después de CI exitoso y publicación explícita de la rama `main`)
 - GitHub Pages: **apagado**
 
 ## Supabase Auth URLs (con dominio Active)
