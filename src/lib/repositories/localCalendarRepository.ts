@@ -287,7 +287,7 @@ export function createLocalCalendarRepository(): CalendarRepository {
 
     async completeTask(state, userId, eventId, note = '') {
       const event = state.events.find((e) => e.id === eventId)
-      if (!event || event.kind !== 'task') return state
+      if (!event || event.kind !== 'task' || event.task_status !== 'in_progress') return state
       const nowIso = new Date().toISOString()
       const startedAt = event.task_started_at ? new Date(event.task_started_at) : new Date()
       const completedAt = new Date()

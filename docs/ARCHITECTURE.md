@@ -102,6 +102,11 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
+- **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque (en una serie, el fin de la ocurrencia que se está haciendo), `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?».
+  - **Sí:** `completeTask` (igual que terminar desde el modal).
+  - **No:** la hora de fin se corre una hora (`extendedTaskEnd`). Si esa hora ya pasó porque se respondió tarde, la próxima pregunta queda a una hora de ahora. En una serie solo se mueve esa ocurrencia.
+  - Se pregunta una vez por cada hora de fin. Si el popup no puede abrirse (web con bloqueo o Android), la misma pregunta queda en un cuadro dentro de la app.
+  - Ventana desktop: misma capability `reminder-*`, ruta `?task-end=1&t=<token>`.
 - Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.reminders.lastScan` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
 
 ## UI principal
@@ -123,7 +128,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.3** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.4** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

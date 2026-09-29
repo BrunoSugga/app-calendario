@@ -338,7 +338,7 @@ export function createCloudCalendarRepository(client: SupabaseClient): CalendarR
 
     async completeTask(state, userId, eventId, note = '') {
       const event = state.events.find((e) => e.id === eventId)
-      if (!event || event.kind !== 'task') return state
+      if (!event || event.kind !== 'task' || event.task_status !== 'in_progress') return state
       const startedAt = event.task_started_at ? new Date(event.task_started_at) : new Date()
       const completedAt = new Date()
       const durationMs = Math.max(0, completedAt.getTime() - startedAt.getTime())

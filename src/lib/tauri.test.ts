@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  consumeQueuedCompleteTask,
+  consumeQueuedExtendTaskEnd,
   consumeQueuedOpenEvent,
   consumeQueuedRescheduleEvent,
   consumeQueuedStartTask,
+  consumeQueuedTaskEndClosed,
   consumeReminderPayload,
+  consumeTaskEndPayload,
+  queueCompleteTask,
+  queueExtendTaskEnd,
   queueOpenEvent,
   queueRescheduleEvent,
   queueStartTask,
+  queueTaskEndClosed,
   storeReminderPayload,
+  storeTaskEndPayload,
 } from './tauri'
 
 describe('reminder payload / bridges', () => {
@@ -72,5 +80,40 @@ describe('reminder payload / bridges', () => {
       newStartsAt: '2026-08-06T10:00:00.000Z',
     })
     expect(consumeQueuedRescheduleEvent()).toBeNull()
+
+    queueCompleteTask('e4')
+    expect(consumeQueuedCompleteTask()).toBe('e4')
+    expect(consumeQueuedCompleteTask()).toBeNull()
+
+    queueExtendTaskEnd('e5')
+    expect(consumeQueuedExtendTaskEnd()).toBe('e5')
+    expect(consumeQueuedExtendTaskEnd()).toBeNull()
+
+    queueTaskEndClosed('e6')
+    expect(consumeQueuedTaskEndClosed()).toBe('e6')
+    expect(consumeQueuedTaskEndClosed()).toBeNull()
+  })
+
+  it('guarda y consume el aviso de fin de tarea, y rechaza un id inválido', () => {
+    const token = storeTaskEndPayload({
+      eventId: 'task-1',
+      title: 'Informe',
+      endsAt: '2026-09-29T13:00:00.000Z',
+    })
+    const data = consumeTaskEndPayload(token)
+    expect(data?.eventId).toBe('task-1')
+    expect(data?.title).toBe('Informe')
+    expect(data?.endsAt).toBe('2026-09-29T13:00:00.000Z')
+    expect(consumeTaskEndPayload(token)).toBeNull()
+
+    expect(() =>
+      storeTaskEndPayload({
+        eventId: '<script>',
+        title: 'x',
+        endsAt: '2026-09-29T13:00:00.000Z',
+      }),
+    ).toThrow(/inválido/)
+    queueCompleteTask('../etc')
+    expect(consumeQueuedCompleteTask()).toBeNull()
   })
 })

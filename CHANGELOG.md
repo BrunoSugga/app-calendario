@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.4] — 2026-09-29
+
+### Added
+
+- Al llegar la hora de fin de una tarea en curso, la app pregunta si ya terminó. Si no, esa hora de fin se corre una hora y vuelve a preguntar.
+
 ## [1.2.3] — 2026-08-17
 
 ### Added

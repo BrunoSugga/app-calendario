@@ -12,9 +12,13 @@ import { normalizeEventKind } from '../types'
 export { isTauri } from './platform'
 
 const REMINDER_PREFIX = 'calendario.reminder.payload.'
+const TASK_END_PREFIX = 'calendario.taskEnd.payload.'
 const OPEN_EVENT_KEY = 'calendario.pending.open-event'
 const START_TASK_KEY = 'calendario.pending.start-task'
 const RESCHEDULE_KEY = 'calendario.pending.reschedule'
+const COMPLETE_TASK_KEY = 'calendario.pending.complete-task'
+const EXTEND_TASK_END_KEY = 'calendario.pending.extend-task-end'
+const TASK_END_CLOSED_KEY = 'calendario.pending.task-end-closed'
 
 export type ReminderPayload = {
   title: string
@@ -37,6 +41,13 @@ export type RescheduleEventPayload = {
   eventId: string
   originalStartsAt: string
   newStartsAt: string
+}
+
+export type TaskEndPromptPayload = {
+  eventId: string
+  title: string
+  endsAt: string
+  exp: number
 }
 
 function sanitizeReminderFields(payload: {
@@ -92,6 +103,53 @@ export function consumeReminderPayload(token: string): ReminderPayload | null {
     if (!data || typeof data !== 'object') return null
     if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
     const clean = sanitizeReminderFields(data)
+    if (!clean) return null
+    return { ...clean, exp: data.exp }
+  } catch {
+    localStorage.removeItem(key)
+    return null
+  }
+}
+
+function sanitizeTaskEndFields(payload: {
+  eventId?: unknown
+  title?: unknown
+  endsAt?: unknown
+}): Omit<TaskEndPromptPayload, 'exp'> | null {
+  const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
+  const endsAt = typeof payload.endsAt === 'string' ? payload.endsAt : ''
+  if (!isSafeId(eventId) || !isSafeIsoDate(endsAt)) return null
+  return {
+    eventId,
+    title: clampText(String(payload.title ?? ''), 200),
+    endsAt: clampText(endsAt, 40),
+  }
+}
+
+export function storeTaskEndPayload(payload: Omit<TaskEndPromptPayload, 'exp'>): string {
+  const clean = sanitizeTaskEndFields(payload)
+  if (!clean) throw new Error('Payload de fin de tarea inválido')
+  const token = createId().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 36)
+  if (!isSafeReminderToken(token)) throw new Error('Token de fin de tarea inválido')
+  const data: TaskEndPromptPayload = {
+    ...clean,
+    exp: Date.now() + 5 * 60 * 1000,
+  }
+  localStorage.setItem(`${TASK_END_PREFIX}${token}`, JSON.stringify(data))
+  return token
+}
+
+export function consumeTaskEndPayload(token: string): TaskEndPromptPayload | null {
+  if (!isSafeReminderToken(token)) return null
+  const key = `${TASK_END_PREFIX}${token}`
+  try {
+    const raw = localStorage.getItem(key)
+    localStorage.removeItem(key)
+    if (!raw) return null
+    const data = JSON.parse(raw) as TaskEndPromptPayload
+    if (!data || typeof data !== 'object') return null
+    if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
+    const clean = sanitizeTaskEndFields(data)
     if (!clean) return null
     return { ...clean, exp: data.exp }
   } catch {
@@ -184,6 +242,50 @@ export function consumeQueuedRescheduleEvent(): RescheduleEventPayload | null {
   }
 }
 
+function consumeQueuedEventId(key: string): string | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    localStorage.removeItem(key)
+    const data = JSON.parse(raw) as { eventId?: string; at?: number }
+    if (!data?.eventId || !isSafeId(data.eventId)) return null
+    if (data.at && Date.now() - data.at > 60_000) return null
+    return data.eventId
+  } catch {
+    localStorage.removeItem(key)
+    return null
+  }
+}
+
+function queueEventId(key: string, eventId: string): void {
+  if (!isSafeId(eventId)) return
+  localStorage.setItem(key, JSON.stringify({ eventId, at: Date.now() }))
+}
+
+export function queueCompleteTask(eventId: string): void {
+  queueEventId(COMPLETE_TASK_KEY, eventId)
+}
+
+export function consumeQueuedCompleteTask(): string | null {
+  return consumeQueuedEventId(COMPLETE_TASK_KEY)
+}
+
+export function queueExtendTaskEnd(eventId: string): void {
+  queueEventId(EXTEND_TASK_END_KEY, eventId)
+}
+
+export function consumeQueuedExtendTaskEnd(): string | null {
+  return consumeQueuedEventId(EXTEND_TASK_END_KEY)
+}
+
+export function queueTaskEndClosed(eventId: string): void {
+  queueEventId(TASK_END_CLOSED_KEY, eventId)
+}
+
+export function consumeQueuedTaskEndClosed(): string | null {
+  return consumeQueuedEventId(TASK_END_CLOSED_KEY)
+}
+
 export async function focusMainWindow(): Promise<void> {
   if (!isTauri()) return
   const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
@@ -233,6 +335,30 @@ export async function notifyMainRescheduleEvent(payload: RescheduleEventPayload)
     await emitTo('main', 'calendario:reschedule-event', payload)
   } else {
     window.dispatchEvent(new CustomEvent('calendario:reschedule-event', { detail: payload }))
+  }
+}
+
+export async function notifyMainCompleteTask(eventId: string): Promise<void> {
+  if (!isSafeId(eventId)) return
+  queueCompleteTask(eventId)
+  if (isTauri()) {
+    const { emitTo } = await import('@tauri-apps/api/event')
+    await focusMainWindow()
+    await emitTo('main', 'calendario:complete-task', { eventId })
+  } else {
+    window.dispatchEvent(new CustomEvent('calendario:complete-task', { detail: { eventId } }))
+  }
+}
+
+export async function notifyMainExtendTaskEnd(eventId: string): Promise<void> {
+  if (!isSafeId(eventId)) return
+  queueExtendTaskEnd(eventId)
+  if (isTauri()) {
+    const { emitTo } = await import('@tauri-apps/api/event')
+    await focusMainWindow()
+    await emitTo('main', 'calendario:extend-task-end', { eventId })
+  } else {
+    window.dispatchEvent(new CustomEvent('calendario:extend-task-end', { detail: { eventId } }))
   }
 }
 
@@ -335,6 +461,76 @@ export async function openReminderWindow(payload: {
       done(false)
     })
     // Si no hay evento a tiempo, asumir OK (comportamiento previo) para no re-disparar en bucle
+    window.setTimeout(() => done(true), 1500)
+  })
+}
+
+export async function openTaskEndPromptWindow(payload: {
+  eventId: string
+  title: string
+  endsAt: string
+}): Promise<boolean> {
+  if (!isSafeId(payload.eventId) || !isSafeIsoDate(payload.endsAt)) {
+    console.error('Aviso de fin de tarea omitido: identificadores inválidos')
+    return false
+  }
+
+  if (isCapacitor()) return false
+
+  let token = ''
+  try {
+    token = storeTaskEndPayload(payload)
+  } catch (err) {
+    console.error('No se pudo preparar el aviso de fin de tarea', err)
+    return false
+  }
+
+  const taskEndQuery = `task-end=1&t=${encodeURIComponent(token)}`
+
+  if (!isTauri()) {
+    const url = new URL(import.meta.env.BASE_URL || '/', window.location.origin)
+    url.searchParams.set('task-end', '1')
+    url.searchParams.set('t', token)
+    const popup = window.open(
+      url.toString(),
+      `calendario-task-end-${payload.eventId.slice(0, 24)}`,
+      'popup=yes,width=440,height=280,resizable=no,scrollbars=yes',
+    )
+    if (popup) {
+      popup.focus()
+      return true
+    }
+    return false
+  }
+
+  const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+  const safeEvent = payload.eventId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 8)
+  const label = `reminder-${safeEvent}-end-${Date.now()}`
+
+  const win = new WebviewWindow(label, {
+    url: `/?${taskEndQuery}`,
+    title: '¿Terminaste la tarea?',
+    width: 440,
+    height: 280,
+    resizable: false,
+    alwaysOnTop: true,
+    center: true,
+    focus: true,
+    decorations: true,
+  })
+
+  return await new Promise<boolean>((resolve) => {
+    let settled = false
+    const done = (ok: boolean) => {
+      if (settled) return
+      settled = true
+      resolve(ok)
+    }
+    win.once('tauri://created', () => done(true))
+    win.once('tauri://error', (event) => {
+      console.error('No se pudo abrir el aviso de fin de tarea', event)
+      done(false)
+    })
     window.setTimeout(() => done(true), 1500)
   })
 }

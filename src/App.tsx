@@ -3,10 +3,15 @@ import { CalendarDataProvider } from './context/CalendarDataContext'
 import { LoginPage } from './components/Auth/LoginPage'
 import { SetPasswordPage } from './components/Auth/SetPasswordPage'
 import { ReminderWindow } from './components/Reminder/ReminderWindow'
+import { TaskEndPromptWindow } from './components/Reminder/TaskEndPromptWindow'
 import { CalendarPage } from './pages/CalendarPage'
 
 function isReminderRoute(): boolean {
   return new URLSearchParams(window.location.search).get('reminder') === '1'
+}
+
+function isTaskEndRoute(): boolean {
+  return new URLSearchParams(window.location.search).get('task-end') === '1'
 }
 
 function AppBody() {
@@ -14,6 +19,10 @@ function AppBody() {
 
   if (isReminderRoute()) {
     return <ReminderWindow />
+  }
+
+  if (isTaskEndRoute()) {
+    return <TaskEndPromptWindow />
   }
 
   if (loading) {

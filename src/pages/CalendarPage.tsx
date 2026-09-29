@@ -9,8 +9,10 @@ import { OrganizerView } from '../components/Views/OrganizerView'
 import { EventModal } from '../components/Event/EventModal'
 import { MissedRemindersModal } from '../components/Reminder/MissedRemindersModal'
 import { ReminderWindow } from '../components/Reminder/ReminderWindow'
+import { TaskEndPromptWindow } from '../components/Reminder/TaskEndPromptWindow'
 import { useCalendarData } from '../context/CalendarDataContext'
 import { useReminders } from '../hooks/useReminders'
+import { useTaskEndPrompts } from '../hooks/useTaskEndPrompts'
 import { useAppUpdater } from '../hooks/useAppUpdater'
 import { dayRange, monthGridRange, navigateView, startOfDay, weekRange } from '../domain/dates'
 import { expandOccurrences } from '../domain/recurrence'
@@ -140,6 +142,7 @@ export function CalendarPage() {
       void handleReschedule(payload)
     },
   })
+  const { fallbackPrompt, confirmFinished, extendOneHour } = useTaskEndPrompts()
   useAppUpdater()
 
   useEffect(() => {
@@ -352,6 +355,21 @@ export function CalendarPage() {
       {inAppReminder && (
         <div className="reminder-overlay" role="dialog" aria-modal="true" aria-label="Recordatorio">
           <ReminderWindow initial={inAppReminder} onDismiss={() => setInAppReminder(null)} />
+        </div>
+      )}
+
+      {fallbackPrompt && (
+        <div className="reminder-overlay" role="dialog" aria-modal="true" aria-label="Fin de tarea">
+          <TaskEndPromptWindow
+            initial={{
+              eventId: fallbackPrompt.eventId,
+              title: fallbackPrompt.title,
+              endsAt: fallbackPrompt.endsAt.toISOString(),
+            }}
+            onYes={confirmFinished}
+            onNo={extendOneHour}
+            onDismiss={() => {}}
+          />
         </div>
       )}
     </div>
