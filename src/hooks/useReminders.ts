@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
 import {
+  collapseSupersededDueReminders,
   partitionMissedReminders,
   reminderFireKey,
   reminderScanRangeWithWorkWeek,
@@ -236,9 +237,14 @@ export function useReminders(options: Options = {}): {
         workWeek,
         lastScan,
       })
+      const { notify, acknowledge } = collapseSupersededDueReminders(due)
+      for (const occ of acknowledge) {
+        firedRef.current.add(reminderFireKey(occ.eventId, occ.originalStartsAt))
+      }
+      if (acknowledge.length > 0) saveFired(firedRef.current)
 
       let openFailures = 0
-      for (const occ of due) {
+      for (const occ of notify) {
         const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
 
         const calendar = calendars.find((c) => c.id === occ.calendarId)

@@ -48,6 +48,49 @@ function chooseOccurrence(occurrences: Occurrence[], anchor: Date): Occurrence |
   return past[0] ?? null
 }
 
+function latestStartedOccurrence(occurrences: Occurrence[], now: Date): Occurrence | null {
+  const started = occurrences
+    .filter((occ) => occ.startsAt.getTime() <= now.getTime())
+    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())
+  return started[0] ?? null
+}
+
+function sameOccurrence(left: Occurrence, right: Occurrence): boolean {
+  return left.originalStartsAt.getTime() === right.originalStartsAt.getTime()
+}
+
+function taskOccurrences(
+  event: CalendarEvent,
+  calendars: Calendar[],
+  exceptions: EventException[],
+  anchor: Date,
+  now: Date,
+): Occurrence[] {
+  const calendar = calendars.find((item) => item.id === event.calendar_id) ?? fallbackCalendar(event)
+  const from = new Date(Math.min(anchor.getTime(), now.getTime()) - 60 * 60 * 1000)
+  const to = new Date(Math.max(anchor.getTime(), now.getTime()) + 60 * 60 * 1000)
+  return expandOccurrences([event], [calendar], exceptions, from, to).filter(
+    (occ) => occ.eventId === event.id,
+  )
+}
+
+/** La ejecución vieja ya tiene una repetición posterior en marcha. */
+export function isSupersededInProgressTask(
+  event: CalendarEvent,
+  calendars: Calendar[],
+  exceptions: EventException[],
+  now: Date,
+): boolean {
+  if (event.kind !== 'task' || event.task_status !== 'in_progress' || !event.rrule) return false
+  const anchor = event.task_started_at ? new Date(event.task_started_at) : now
+  if (Number.isNaN(anchor.getTime()) || Number.isNaN(now.getTime())) return false
+  const occurrences = taskOccurrences(event, calendars, exceptions, anchor, now)
+  const run = chooseOccurrence(occurrences, anchor)
+  const current = latestStartedOccurrence(occurrences, now)
+  if (!run || !current) return false
+  return !sameOccurrence(run, current) && run.originalStartsAt.getTime() < current.originalStartsAt.getTime()
+}
+
 export function taskEndCheckpoint(
   event: CalendarEvent,
   calendars: Calendar[],
@@ -55,15 +98,11 @@ export function taskEndCheckpoint(
   now: Date,
 ): TaskEndCheckpoint | null {
   if (event.kind !== 'task' || event.task_status !== 'in_progress') return null
+  if (isSupersededInProgressTask(event, calendars, exceptions, now)) return null
   const anchor = event.task_started_at ? new Date(event.task_started_at) : now
   if (Number.isNaN(anchor.getTime()) || Number.isNaN(now.getTime())) return null
 
-  const calendar = calendars.find((item) => item.id === event.calendar_id) ?? fallbackCalendar(event)
-  const from = new Date(Math.min(anchor.getTime(), now.getTime()) - 60 * 60 * 1000)
-  const to = new Date(Math.max(anchor.getTime(), now.getTime()) + 60 * 60 * 1000)
-  const occurrences = expandOccurrences([event], [calendar], exceptions, from, to).filter(
-    (occ) => occ.eventId === event.id,
-  )
+  const occurrences = taskOccurrences(event, calendars, exceptions, anchor, now)
   const chosen = chooseOccurrence(occurrences, anchor)
 
   const startsAt = chosen?.startsAt ?? new Date(event.starts_at)

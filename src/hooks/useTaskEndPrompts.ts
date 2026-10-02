@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  isSupersededInProgressTask,
   isTaskEndDue,
   selectDueTaskEndPrompts,
   taskEndCheckpoint,
@@ -31,6 +32,7 @@ export function useTaskEndPrompts(options: Options = {}): {
   const { user } = useAuth()
   const { events, calendars, exceptions, loading, completeTask, saveEvent } = useCalendarData()
   const promptedRef = useRef(new Set<string>())
+  const closingRef = useRef(new Set<string>())
   const activeKeyRef = useRef<string | null>(null)
   const inflightRef = useRef(false)
   const optionsRef = useRef(options)
@@ -149,12 +151,27 @@ export function useTaskEndPrompts(options: Options = {}): {
     let cancelled = false
 
     const tick = async () => {
-      if (cancelled || activeKeyRef.current || inflightRef.current) return
+      if (cancelled) return
       const now = new Date()
+      const { events: currentEvents, calendars: currentCalendars, exceptions: currentExceptions } =
+        dataRef.current
+      for (const id of closingRef.current) {
+        const event = currentEvents.find((item) => item.id === id)
+        if (!event || event.task_status !== 'in_progress') closingRef.current.delete(id)
+      }
+      for (const event of currentEvents) {
+        if (!isSupersededInProgressTask(event, currentCalendars, currentExceptions, now)) continue
+        if (closingRef.current.has(event.id) || inflightRef.current) continue
+        closingRef.current.add(event.id)
+        void dataRef.current.completeTask(event.id).catch(() => {
+          closingRef.current.delete(event.id)
+        })
+      }
+      if (activeKeyRef.current || inflightRef.current) return
       const due = selectDueTaskEndPrompts(
-        dataRef.current.events,
-        dataRef.current.calendars,
-        dataRef.current.exceptions,
+        currentEvents,
+        currentCalendars,
+        currentExceptions,
         now,
         promptedRef.current,
       )

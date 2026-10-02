@@ -223,6 +223,38 @@ export function partitionMissedReminders(
   return { due, ancient }
 }
 
+/**
+ * En una serie, solo la repetición vencida más reciente abre aviso.
+ * Las anteriores se dan por vistas: ya existe una posterior.
+ */
+export function collapseSupersededDueReminders(due: Occurrence[]): {
+  notify: Occurrence[]
+  acknowledge: Occurrence[]
+} {
+  const notify: Occurrence[] = []
+  const acknowledge: Occurrence[] = []
+  const series = new Map<string, Occurrence[]>()
+
+  for (const occ of due) {
+    if (!occ.isRecurring) {
+      notify.push(occ)
+      continue
+    }
+    const group = series.get(occ.eventId) ?? []
+    group.push(occ)
+    series.set(occ.eventId, group)
+  }
+
+  for (const group of series.values()) {
+    const sorted = [...group].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    const latest = sorted[sorted.length - 1]
+    if (latest) notify.push(latest)
+    acknowledge.push(...sorted.slice(0, -1))
+  }
+
+  return { notify, acknowledge }
+}
+
 /** Heartbeat lastScan: solo tras un escaneo con datos listos y sin disparos pendientes de mostrar. */
 export function shouldCommitReminderLastScan(options: {
   dataReady: boolean

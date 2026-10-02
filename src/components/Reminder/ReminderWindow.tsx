@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { addMinutes, formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
-import { REMINDER_MAX_SNOOZE_MINUTES } from '../../domain/reminders'
-import { clearFiredForEvent, clearReminderStateForEvent } from '../../domain/reschedule'
+import { clearFiredForOccurrence, clearSnoozeForEvent } from '../../domain/reschedule'
 import {
   consumeReminderPayload,
   isTauri,
@@ -228,42 +227,38 @@ export function ReminderWindow({
     await getCurrentWindow().close()
   }
 
-  async function snooze(minutes: number) {
-    if (!data?.eventId || !isSafeId(data.eventId)) return
-    if (!Number.isFinite(minutes) || minutes < 1 || minutes > REMINDER_MAX_SNOOZE_MINUTES) return
-    const until = Date.now() + minutes * 60 * 1000
-    clearFiredForEvent(data.eventId)
-    localStorage.setItem(`calendario.snooze.${data.eventId}`, String(until))
-    setMessage(
-      `Pospuesto ${SHORT_OPTIONS.find((o) => o.minutes === minutes)?.label ?? `${minutes} min`}`,
-    )
-    window.setTimeout(() => {
-      void closeWindow()
-    }, 600)
-  }
-
-  async function rescheduleTo(newStartsAt: Date, label: string) {
+  async function rescheduleTo(
+    newStartsAt: Date,
+    label: string,
+    options?: { preserveTitle?: boolean },
+  ) {
     if (!data?.eventId || !isSafeId(data.eventId)) return
     if (Number.isNaN(newStartsAt.getTime())) {
       setMessage('Fecha u hora inválida')
       return
     }
     setBusy(true)
-    clearReminderStateForEvent(data.eventId)
+    clearSnoozeForEvent(data.eventId)
+    const original = new Date(data.originalStartsAt || data.startsAt)
+    if (!Number.isNaN(original.getTime())) clearFiredForOccurrence(data.eventId, original)
     await notifyMainRescheduleEvent({
       eventId: data.eventId,
       originalStartsAt: data.originalStartsAt || data.startsAt,
       newStartsAt: formatISO(newStartsAt),
+      preserveTitle: options?.preserveTitle === true,
     })
-    setMessage(`Reagendado: ${label}`)
+    setMessage(options?.preserveTitle ? `Pospuesto ${label}` : `Reagendado: ${label}`)
     window.setTimeout(() => {
       void closeWindow()
     }, 600)
   }
 
   async function applyShort(atIndex = shortIndex) {
+    if (!data) return
     const opt = SHORT_OPTIONS[atIndex] ?? SHORT_OPTIONS[0]
-    await snooze(opt.minutes)
+    const base = new Date(data.startsAt)
+    if (Number.isNaN(base.getTime())) return
+    await rescheduleTo(addMinutes(base, opt.minutes), opt.label, { preserveTitle: true })
   }
 
   async function applyLong(atIndex = longIndex) {

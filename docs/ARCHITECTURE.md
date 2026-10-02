@@ -97,12 +97,14 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`.
 - Aplazamientos:
-  - **≤12 h** (stepper min/h): solo silencia (`calendario.snooze.*`).
-  - Al vencer, la hora efectiva de aviso es el fin del snooze; el escaneo conserva la ocurrencia original y limpia el snooze después de reabrir el popup.
-  - **>12 h** (días) o **Reagendar**: mueve el evento (`calendario:reschedule-event`) y prefija el título con `REAGENDADO · ` (`src/domain/reschedule.ts`).
+  - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas corre inicio y fin la misma cantidad, sin prefijo «REAGENDADO». El aviso ya visto de esa repetición se limpia; los de los otros días de la serie quedan.
+  - Al vencer un aplazamiento viejo guardado en `calendario.snooze.*`, la hora efectiva sigue siendo el fin del snooze.
+  - **>12 h** (días) o **Reagendar**: mueve inicio y fin juntos (`movedScheduleWindow`) y prefija el título con `REAGENDADO · `.
+  - **Serie periódica:** si hay varias repeticiones vencidas, solo abre aviso la más reciente. Las anteriores se marcan vistas, porque ya existe una posterior.
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
-- **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque (en una serie, el fin de la ocurrencia que se está haciendo), `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?».
+- **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque que se está haciendo, `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?».
+  - En una serie, si ya empezó una repetición posterior, la ejecución vieja se cierra sola (`completeTask`) y no dispara un aviso por cada día pasado.
   - **Sí:** `completeTask` (igual que terminar desde el modal).
   - **No:** la hora de fin se corre una hora (`extendedTaskEnd`). Si esa hora ya pasó porque se respondió tarde, la próxima pregunta queda a una hora de ahora. En una serie solo se mueve esa ocurrencia.
   - Se pregunta una vez por cada hora de fin. Si el popup no puede abrirse (web con bloqueo o Android), la misma pregunta queda en un cuadro dentro de la app.
@@ -128,7 +130,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.4** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.5** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

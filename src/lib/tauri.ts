@@ -41,6 +41,8 @@ export type RescheduleEventPayload = {
   eventId: string
   originalStartsAt: string
   newStartsAt: string
+  /** Aplazar una tarea mueve la ventana sin marcar el título como reagendado. */
+  preserveTitle?: boolean
 }
 
 export type TaskEndPromptPayload = {
@@ -235,6 +237,7 @@ export function consumeQueuedRescheduleEvent(): RescheduleEventPayload | null {
       eventId: data.eventId,
       originalStartsAt: data.originalStartsAt,
       newStartsAt: data.newStartsAt,
+      ...(data.preserveTitle === true ? { preserveTitle: true as const } : {}),
     }
   } catch {
     localStorage.removeItem(RESCHEDULE_KEY)

@@ -4,6 +4,14 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.5] — 2026-10-02
+
+### Fixed
+
+- Posponer o reagendar un evento, recordatorio o tarea mueve juntos el inicio y el fin.
+- Una serie periódica solo avisa por la repetición vencida más reciente; las anteriores se dan por vistas.
+- Una tarea periódica ya no pregunta por cada repetición vencida: si empezó una posterior, la ejecución anterior se cierra sola.
+
 ## [1.2.4] — 2026-09-29
 
 ### Added

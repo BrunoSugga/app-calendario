@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, addMinutes } from 'date-fns'
 import type { Occurrence } from '../types'
 import {
+  collapseSupersededDueReminders,
   isOccurrenceAncientMissed,
   isOccurrenceDueForReminder,
   partitionMissedReminders,
@@ -369,5 +370,45 @@ describe('pipeline expand + due (regresión recordatorio duración 0)', () => {
     const fixed = expandOccurrences(events, calendars, [], range.start, range.end)
     expect(fixed).toHaveLength(1)
     expect(selectDueReminders(fixed, now, new Set()).map((o) => o.eventId)).toEqual(['evt-1'])
+  })
+})
+
+describe('collapseSupersededDueReminders', () => {
+  it('de una serie solo avisa la repetición vencida más reciente', () => {
+    const monday = new Date('2026-09-28T12:00:00.000Z')
+    const tuesday = new Date('2026-09-29T12:00:00.000Z')
+    const wednesday = new Date('2026-09-30T12:00:00.000Z')
+    const series = [monday, tuesday, wednesday].map((startsAt) =>
+      occ({
+        eventId: 'daily-1',
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        originalStartsAt: startsAt,
+        isRecurring: true,
+        kind: 'event',
+      }),
+    )
+    const other = occ({
+      eventId: 'once-1',
+      startsAt: tuesday,
+      endsAt: new Date(tuesday.getTime() + 30 * 60 * 1000),
+      originalStartsAt: tuesday,
+      kind: 'event',
+    })
+
+    const { notify, acknowledge } = collapseSupersededDueReminders([...series, other])
+    expect(notify.map((item) => item.eventId + item.startsAt.toISOString())).toEqual([
+      `once-1${tuesday.toISOString()}`,
+      `daily-1${wednesday.toISOString()}`,
+    ])
+    expect(acknowledge.map((item) => item.startsAt.toISOString())).toEqual([
+      monday.toISOString(),
+      tuesday.toISOString(),
+    ])
+  })
+
+  it('un evento suelto sigue avisando', () => {
+    const item = occ({ kind: 'event', isRecurring: false })
+    expect(collapseSupersededDueReminders([item])).toEqual({ notify: [item], acknowledge: [] })
   })
 })

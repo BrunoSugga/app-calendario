@@ -17,7 +17,9 @@ import { useAppUpdater } from '../hooks/useAppUpdater'
 import { dayRange, monthGridRange, navigateView, startOfDay, weekRange } from '../domain/dates'
 import { expandOccurrences } from '../domain/recurrence'
 import {
-  clearReminderStateForEvent,
+  clearFiredForOccurrence,
+  clearSnoozeForEvent,
+  movedScheduleWindow,
   withReagendadoPrefix,
 } from '../domain/reschedule'
 import type { RescheduleEventPayload, ReminderPayload } from '../lib/tauri'
@@ -97,22 +99,21 @@ export function CalendarPage() {
       const allDay = occ?.allDay ?? master.all_day
       const reminderMinutes = occ?.reminderMinutes ?? master.reminder_minutes
       const kind = occ?.kind ?? master.kind
-      const durationMs = occ
-        ? Math.max(0, occ.endsAt.getTime() - occ.startsAt.getTime())
-        : Math.max(0, new Date(master.ends_at).getTime() - new Date(master.starts_at).getTime())
-      const newEndsAt =
-        kind === 'reminder' ? newStartsAt : new Date(newStartsAt.getTime() + durationMs)
+      const previousStart = occ?.startsAt ?? new Date(master.starts_at)
+      const previousEnd = occ?.endsAt ?? new Date(master.ends_at)
+      const windowMoved = movedScheduleWindow(previousStart, previousEnd, newStartsAt, kind)
       const isRecurring = Boolean(master.rrule || occ?.isRecurring)
 
-      clearReminderStateForEvent(payload.eventId)
+      clearSnoozeForEvent(payload.eventId)
+      clearFiredForOccurrence(payload.eventId, originalStartsAt)
 
       await saveEvent({
         id: master.id,
         calendar_id: master.calendar_id,
-        title: withReagendadoPrefix(titleSource),
+        title: payload.preserveTitle ? titleSource : withReagendadoPrefix(titleSource),
         description,
-        starts_at: formatISO(newStartsAt),
-        ends_at: formatISO(newEndsAt),
+        starts_at: formatISO(windowMoved.startsAt),
+        ends_at: formatISO(windowMoved.endsAt),
         all_day: allDay,
         reminder_minutes: reminderMinutes,
         rrule: master.rrule,

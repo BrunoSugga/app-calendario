@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildRRule } from './recurrence'
 import {
   extendedTaskEnd,
+  isSupersededInProgressTask,
   selectDueTaskEndPrompts,
   taskEndCheckpoint,
   taskEndExtensionDraft,
@@ -108,6 +109,28 @@ describe('taskEndPrompt', () => {
     )
     expect(extendedTaskEnd(end, new Date('2026-09-29T15:30:00.000Z')).toISOString()).toBe(
       '2026-09-29T16:30:00.000Z',
+    )
+  })
+
+  it('no vuelve a preguntar por un día viejo si ya empezó una repetición posterior', () => {
+    const series = task({
+      starts_at: '2026-09-28T12:00:00.000Z',
+      ends_at: '2026-09-28T13:00:00.000Z',
+      rrule: buildRRule('daily', new Date('2026-09-28T12:00:00.000Z')),
+      task_started_at: '2026-09-28T12:05:00.000Z',
+    })
+    const duringNext = new Date('2026-09-30T12:30:00.000Z')
+    expect(isSupersededInProgressTask(series, [calendar], exceptions, duringNext)).toBe(true)
+    expect(selectDueTaskEndPrompts([series], [calendar], exceptions, duringNext, new Set())).toHaveLength(0)
+
+    const sameDayAfterEnd = new Date('2026-09-29T13:01:00.000Z')
+    const stillThatRun = task({
+      ...series,
+      task_started_at: '2026-09-29T12:05:00.000Z',
+    })
+    expect(isSupersededInProgressTask(stillThatRun, [calendar], exceptions, sameDayAfterEnd)).toBe(false)
+    expect(selectDueTaskEndPrompts([stillThatRun], [calendar], exceptions, sameDayAfterEnd, new Set())).toHaveLength(
+      1,
     )
   })
 
