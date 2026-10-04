@@ -316,7 +316,6 @@ export async function notifyMainStartTask(eventId: string): Promise<void> {
   queueStartTask(eventId)
   if (isTauri()) {
     const { emitTo } = await import('@tauri-apps/api/event')
-    await focusMainWindow()
     await emitTo('main', 'calendario:start-task', { eventId })
   } else {
     window.dispatchEvent(new CustomEvent('calendario:start-task', { detail: { eventId } }))
@@ -334,7 +333,6 @@ export async function notifyMainRescheduleEvent(payload: RescheduleEventPayload)
   queueRescheduleEvent(payload)
   if (isTauri()) {
     const { emitTo } = await import('@tauri-apps/api/event')
-    await focusMainWindow()
     await emitTo('main', 'calendario:reschedule-event', payload)
   } else {
     window.dispatchEvent(new CustomEvent('calendario:reschedule-event', { detail: payload }))
@@ -346,7 +344,6 @@ export async function notifyMainCompleteTask(eventId: string): Promise<void> {
   queueCompleteTask(eventId)
   if (isTauri()) {
     const { emitTo } = await import('@tauri-apps/api/event')
-    await focusMainWindow()
     await emitTo('main', 'calendario:complete-task', { eventId })
   } else {
     window.dispatchEvent(new CustomEvent('calendario:complete-task', { detail: { eventId } }))
@@ -358,7 +355,6 @@ export async function notifyMainExtendTaskEnd(eventId: string): Promise<void> {
   queueExtendTaskEnd(eventId)
   if (isTauri()) {
     const { emitTo } = await import('@tauri-apps/api/event')
-    await focusMainWindow()
     await emitTo('main', 'calendario:extend-task-end', { eventId })
   } else {
     window.dispatchEvent(new CustomEvent('calendario:extend-task-end', { detail: { eventId } }))

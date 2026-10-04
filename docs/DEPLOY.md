@@ -55,7 +55,7 @@ Misma cuenta Cloudflare / dominio `bmatrix.org`. Informes usa túnel Zero Trust;
 
 ## Estado y pendientes
 
-- Web canónica activa y release desktop v1.2.5 publicada.
+- Web canónica activa y release desktop v1.2.6 publicada.
 - Tareas abiertas de Edge Function, APK, tokens y Access: [`PENDIENTES.md`](PENDIENTES.md).
 - Runbooks de publicación/rollback: [`OPERATIONS.md`](OPERATIONS.md).
 

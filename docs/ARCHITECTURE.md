@@ -95,7 +95,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
-- Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`.
+- Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`. El calendario solo pasa a primer plano con **Abrir** (editar ese aviso). Aplazar, reagendar, descartar, empezar o cerrar la tarea no lo traen al frente ni cambian el día visible.
 - Aplazamientos:
   - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas corre inicio y fin la misma cantidad, sin prefijo «REAGENDADO». El aviso ya visto de esa repetición se limpia; los de los otros días de la serie quedan.
   - Al vencer un aplazamiento viejo guardado en `calendario.snooze.*`, la hora efectiva sigue siendo el fin del snooze.
@@ -130,7 +130,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.5** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.6** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

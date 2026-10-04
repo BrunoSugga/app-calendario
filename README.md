@@ -8,7 +8,7 @@ Aplicación de calendario estilo Outlook con:
 - Sync multi-dispositivo vía Supabase (Auth + Postgres + Realtime)
 - Modo local (localStorage) si no configurás Supabase
 
-**Producción:** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · web y escritorio **v1.2.5** · APK Capacitor aún no distribuida.
+**Producción:** [https://calendario.bmatrix.org](https://calendario.bmatrix.org) · web y escritorio **v1.2.6** · APK Capacitor aún no distribuida.
 
 ## Contexto del proyecto (agentes y humanos)
 
@@ -106,7 +106,7 @@ Preparación, hallazgos de dependencias, seguridad, firma y checklist de disposi
 La app de escritorio usa el updater de Tauri + GitHub Releases.
 
 1. Al abrir, si hay una versión nueva pregunta si querés actualizar.
-2. Para publicar: Actions → **Release desktop** → Run workflow con la versión exacta (actual: `1.2.5`).
+2. Para publicar: Actions → **Release desktop** → Run workflow con la versión exacta (actual: `1.2.6`).
 3. Secretos requeridos en GitHub:
    - `TAURI_SIGNING_PRIVATE_KEY` (contenido de `.tauri/bmx-calendario.key`)
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene password)

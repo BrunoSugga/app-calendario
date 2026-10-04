@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.6] — 2026-10-04
+
+### Fixed
+
+- Aplazar o reagendar ya no abre el calendario ni cambia el día visible. Solo **Abrir** lo trae al frente para editar ese aviso.
+
 ## [1.2.5] — 2026-10-02
 
 ### Fixed

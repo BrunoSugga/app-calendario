@@ -121,9 +121,6 @@ export function CalendarPage() {
         editScope: isRecurring ? 'single' : undefined,
         occurrenceOriginalStartsAt: isRecurring ? formatISO(originalStartsAt) : undefined,
       })
-
-      setSelectedDate(startOfDay(newStartsAt))
-      setView('day')
     },
     [calendars, events, exceptions, saveEvent],
   )
