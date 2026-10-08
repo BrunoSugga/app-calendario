@@ -275,8 +275,10 @@ function expandMaster(
       ? monthlyDateOccurrences(rule, new Date(event.starts_at), rangeStart, rangeEnd, monthDay)
       : rule.between(rangeStart, rangeEnd, true)
   const occurrences: Occurrence[] = []
+  const seenOriginals = new Set<number>()
 
   for (const original of dates) {
+    seenOriginals.add(original.getTime())
     const cancelled = eventExceptions.some(
       (ex) =>
         ex.is_cancelled && new Date(ex.original_starts_at).getTime() === original.getTime(),
@@ -302,6 +304,33 @@ function expandMaster(
       endsAt,
       allDay: override?.all_day ?? event.all_day,
       reminderMinutes: override?.reminder_minutes ?? event.reminder_minutes,
+      color: calendar.color,
+      isRecurring: true,
+      originalStartsAt: original,
+      kind: event.kind ?? 'event',
+      taskStatus: event.task_status ?? null,
+    })
+  }
+
+  // Un aplazamiento puede dejar el horario original fuera del rango y el nuevo adentro.
+  for (const ex of eventExceptions) {
+    if (ex.is_cancelled || !ex.starts_at) continue
+    const original = new Date(ex.original_starts_at)
+    if (Number.isNaN(original.getTime()) || seenOriginals.has(original.getTime())) continue
+    const startsAt = new Date(ex.starts_at)
+    const endsAt = ex.ends_at ? new Date(ex.ends_at) : addMilliseconds(startsAt, durationMs)
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) continue
+    if (endsAt < rangeStart || startsAt > rangeEnd) continue
+    seenOriginals.add(original.getTime())
+    occurrences.push({
+      eventId: event.id,
+      calendarId: event.calendar_id,
+      title: ex.title ?? event.title,
+      description: ex.description ?? event.description,
+      startsAt,
+      endsAt,
+      allDay: ex.all_day ?? event.all_day,
+      reminderMinutes: ex.reminder_minutes ?? event.reminder_minutes,
       color: calendar.color,
       isRecurring: true,
       originalStartsAt: original,

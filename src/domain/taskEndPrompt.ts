@@ -104,6 +104,7 @@ export function taskEndCheckpoint(
 
   const occurrences = taskOccurrences(event, calendars, exceptions, anchor, now)
   const chosen = chooseOccurrence(occurrences, anchor)
+  if (!chosen && event.rrule) return null
 
   const startsAt = chosen?.startsAt ?? new Date(event.starts_at)
   const endsAt = chosen?.endsAt ?? new Date(event.ends_at)

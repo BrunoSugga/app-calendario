@@ -188,6 +188,48 @@ describe('expandOccurrences', () => {
     expect(moved?.reminderMinutes).toBe(5)
   })
 
+  it('muestra un aplazamiento cuyo horario original quedó fuera del rango', () => {
+    const rrule = buildRRule('daily', new Date('2026-08-03T10:00:00.000Z'))
+    const master = event({
+      starts_at: '2026-08-03T10:00:00.000Z',
+      ends_at: '2026-08-03T11:00:00.000Z',
+      rrule,
+      kind: 'task',
+    })
+    const override: EventException = {
+      id: 'ex-moved',
+      event_id: master.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-08-05T10:00:00.000Z',
+      is_cancelled: false,
+      title: null,
+      description: null,
+      starts_at: '2026-08-05T16:00:00.000Z',
+      ends_at: '2026-08-05T17:00:00.000Z',
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-08-05T10:00:00.000Z',
+    }
+
+    const later = expandOccurrences(
+      [master],
+      [cal],
+      [override],
+      new Date('2026-08-05T15:00:00.000Z'),
+      new Date('2026-08-05T18:00:00.000Z'),
+    )
+    expect(later).toHaveLength(1)
+    expect(later[0].startsAt.toISOString()).toBe('2026-08-05T16:00:00.000Z')
+    expect(later[0].endsAt.toISOString()).toBe('2026-08-05T17:00:00.000Z')
+    expect(later[0].originalStartsAt.toISOString()).toBe('2026-08-05T10:00:00.000Z')
+
+    const wide = expandOccurrences([master], [cal], [override], rangeStart, rangeEnd)
+    const sameOriginal = wide.filter(
+      (item) => item.originalStartsAt.toISOString() === '2026-08-05T10:00:00.000Z',
+    )
+    expect(sameOriginal).toHaveLength(1)
+  })
+
   it('repite por día del mes y usa el último día en meses cortos', () => {
     const startsAt = new Date('2026-01-31T10:00:00.000Z')
     const master = event({

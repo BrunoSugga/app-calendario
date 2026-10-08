@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.7] — 2026-10-08
+
+### Fixed
+
+- Empezar una tarea aplazada ya no pregunta al instante si terminó. La pregunta espera la hora de fin que se movió junto con el inicio.
+
 ## [1.2.6] — 2026-10-04
 
 ### Fixed

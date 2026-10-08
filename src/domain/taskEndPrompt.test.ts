@@ -134,6 +134,39 @@ describe('taskEndPrompt', () => {
     )
   })
 
+  it('al empezar una serie aplazada espera el fin movido', () => {
+    const series = task({
+      starts_at: '2026-09-28T12:00:00.000Z',
+      ends_at: '2026-09-28T13:00:00.000Z',
+      rrule: buildRRule('daily', new Date('2026-09-28T12:00:00.000Z')),
+      task_started_at: '2026-09-29T16:00:00.000Z',
+    })
+    const moved: EventException = {
+      id: 'ex-1',
+      event_id: series.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-09-29T12:00:00.000Z',
+      is_cancelled: false,
+      title: null,
+      description: null,
+      starts_at: '2026-09-29T16:00:00.000Z',
+      ends_at: '2026-09-29T17:00:00.000Z',
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-09-29T12:00:00.000Z',
+    }
+    const atStart = new Date('2026-09-29T16:00:00.000Z')
+    expect(selectDueTaskEndPrompts([series], [calendar], [moved], atStart, new Set())).toHaveLength(0)
+    expect(taskEndCheckpoint(series, [calendar], [moved], atStart)?.endsAt.toISOString()).toBe(
+      '2026-09-29T17:00:00.000Z',
+    )
+
+    const afterEnd = new Date('2026-09-29T17:00:00.000Z')
+    const due = selectDueTaskEndPrompts([series], [calendar], [moved], afterEnd, new Set())
+    expect(due).toHaveLength(1)
+    expect(due[0].endsAt.toISOString()).toBe('2026-09-29T17:00:00.000Z')
+  })
+
   it('arma el guardado de la extensión sin perder el alcance de una serie', () => {
     const now = new Date('2026-09-29T13:00:00.000Z')
     const single = task()

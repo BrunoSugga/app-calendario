@@ -103,7 +103,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **Serie periódica:** si hay varias repeticiones vencidas, solo abre aviso la más reciente. Las anteriores se marcan vistas, porque ya existe una posterior.
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
-- **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque que se está haciendo, `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?».
+- **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque que se está haciendo, `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?». Si esa ocurrencia se aplazó, la pregunta usa el fin ya movido: no aparece al pulsar **Empezar tarea**.
   - En una serie, si ya empezó una repetición posterior, la ejecución vieja se cierra sola (`completeTask`) y no dispara un aviso por cada día pasado.
   - **Sí:** `completeTask` (igual que terminar desde el modal).
   - **No:** la hora de fin se corre una hora (`extendedTaskEnd`). Si esa hora ya pasó porque se respondió tarde, la próxima pregunta queda a una hora de ahora. En una serie solo se mueve esa ocurrencia.
@@ -130,7 +130,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.6** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.7** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 
