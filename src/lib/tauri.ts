@@ -385,14 +385,19 @@ export async function openReminderWindow(payload: {
     return false
   }
 
+  const reminderPayload = {
+    ...payload,
+    reminderMinutes: reminderLeadMinutes(payload.reminderMinutes),
+  }
+
   if (isCapacitor()) {
     window.dispatchEvent(
-      new CustomEvent('calendario:show-reminder', { detail: { payload } }),
+      new CustomEvent('calendario:show-reminder', { detail: { payload: reminderPayload } }),
     )
     return true
   }
 
-  const token = storeReminderPayload(payload)
+  const token = storeReminderPayload(reminderPayload)
 
   const reminderQuery = `reminder=1&t=${encodeURIComponent(token)}`
 
