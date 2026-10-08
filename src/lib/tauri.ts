@@ -6,6 +6,7 @@ import {
   isSafeIsoDate,
   isSafeReminderToken,
 } from './security'
+import { reminderLeadMinutes } from '../domain/reschedule'
 import type { EventKind } from '../types'
 import { normalizeEventKind } from '../types'
 
@@ -29,6 +30,7 @@ export type ReminderPayload = {
   kind: EventKind
   startsAt: string
   originalStartsAt: string
+  reminderMinutes: number
   exp: number
 }
 
@@ -61,6 +63,7 @@ function sanitizeReminderFields(payload: {
   kind?: unknown
   startsAt?: unknown
   originalStartsAt?: unknown
+  reminderMinutes?: unknown
 }): Omit<ReminderPayload, 'exp'> | null {
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
   const startsAt = typeof payload.startsAt === 'string' ? payload.startsAt : ''
@@ -78,6 +81,7 @@ function sanitizeReminderFields(payload: {
     kind: normalizeEventKind(payload.kind),
     startsAt: clampText(startsAt, 40),
     originalStartsAt: clampText(originalStartsAt, 40),
+    reminderMinutes: reminderLeadMinutes(payload.reminderMinutes),
   }
 }
 
@@ -370,6 +374,7 @@ export async function openReminderWindow(payload: {
   kind: EventKind
   startsAt: string
   originalStartsAt: string
+  reminderMinutes?: number
 }): Promise<boolean> {
   if (
     !isSafeId(payload.eventId) ||

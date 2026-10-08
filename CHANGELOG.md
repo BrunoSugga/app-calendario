@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.8] — 2026-10-08
+
+### Fixed
+
+- Posponer cuenta el plazo desde el momento en que se confirma el aviso. Si se ve tarde, no vuelve a sonar al instante. Vale para eventos, recordatorios y tareas, en minutos y en días.
+
 ## [1.2.7] — 2026-10-08
 
 ### Fixed

@@ -33,12 +33,14 @@ describe('reminder payload / bridges', () => {
       kind: 'task',
       startsAt: '2026-08-05T10:00:00.000Z',
       originalStartsAt: '2026-08-05T10:00:00.000Z',
+      reminderMinutes: 15,
     })
     const data = consumeReminderPayload(token)
     expect(data?.kind).toBe('task')
     expect(data?.eventId).toBe('evt-1')
     expect(data?.startsAt).toBe('2026-08-05T10:00:00.000Z')
     expect(data?.originalStartsAt).toBe('2026-08-05T10:00:00.000Z')
+    expect(data?.reminderMinutes).toBe(15)
     expect(consumeReminderPayload(token)).toBeNull()
   })
 

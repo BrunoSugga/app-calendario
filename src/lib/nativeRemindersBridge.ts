@@ -90,6 +90,7 @@ function dispatchInAppReminder(extra: NativeReminderExtra): void {
           kind: extra.kind,
           startsAt: extra.startsAt,
           originalStartsAt: extra.originalStartsAt,
+          reminderMinutes: extra.reminderMinutes,
         },
       },
     }),

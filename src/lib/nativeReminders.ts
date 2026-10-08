@@ -2,6 +2,7 @@ import { addMinutes, format, formatISO } from 'date-fns'
 import {
   reminderFireKey,
 } from '../domain/reminders'
+import { reminderLeadMinutes } from '../domain/reschedule'
 import {
   isWithinWorkHours,
   isWorkCalendarMuted,
@@ -37,6 +38,7 @@ export type NativeReminderExtra = {
   title: string
   timeLabel: string
   calendarName: string
+  reminderMinutes: number
 }
 
 export type NativeReminderScheduleItem = {
@@ -102,6 +104,7 @@ export function parseNotificationExtra(extra: unknown): NativeReminderExtra | nu
     title: stripUnsafeVisibleText(String(raw.title ?? ''), NATIVE_TITLE_MAX),
     timeLabel: stripUnsafeVisibleText(String(raw.timeLabel ?? ''), 64),
     calendarName: stripUnsafeVisibleText(String(raw.calendarName ?? ''), 80),
+    reminderMinutes: reminderLeadMinutes(raw.reminderMinutes),
   }
 }
 
@@ -163,6 +166,7 @@ export function scheduleFromOccurrences(
         title,
         timeLabel,
         calendarName: name,
+        reminderMinutes: reminderLeadMinutes(occ.reminderMinutes),
       },
     })
   }

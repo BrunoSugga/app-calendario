@@ -97,9 +97,10 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`. El calendario solo pasa a primer plano con **Abrir** (editar ese aviso). Aplazar, reagendar, descartar, empezar o cerrar la tarea no lo traen al frente ni cambian el día visible.
 - Aplazamientos:
-  - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas corre inicio y fin la misma cantidad, sin prefijo «REAGENDADO». El aviso ya visto de esa repetición se limpia; los de los otros días de la serie quedan.
+  - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas el plazo se cuenta desde el momento en que se pospone, no desde la hora original. Inicio y fin se corren juntos y se conserva el anticipo del aviso, sin prefijo «REAGENDADO». El aviso ya visto de esa repetición se limpia; los de los otros días de la serie quedan.
+  - **>12 h** (días): el mismo criterio, desde el momento en que se pospone, y prefija el título con `REAGENDADO · `.
   - Al vencer un aplazamiento viejo guardado en `calendario.snooze.*`, la hora efectiva sigue siendo el fin del snooze.
-  - **>12 h** (días) o **Reagendar**: mueve inicio y fin juntos (`movedScheduleWindow`) y prefija el título con `REAGENDADO · `.
+  - **Reagendar**: usa la fecha y hora elegidas, mueve inicio y fin juntos (`movedScheduleWindow`) y prefija el título con `REAGENDADO · `.
   - **Serie periódica:** si hay varias repeticiones vencidas, solo abre aviso la más reciente. Las anteriores se marcan vistas, porque ya existe una posterior.
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
@@ -130,7 +131,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.7** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.8** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

@@ -262,6 +262,7 @@ export function useReminders(options: Options = {}): {
           kind: occ.kind,
           startsAt: formatISO(occ.startsAt),
           originalStartsAt: formatISO(occ.originalStartsAt),
+          reminderMinutes: occ.reminderMinutes,
         })
 
         // Solo marcar disparado si se mostró aviso (popup/alert/webview).

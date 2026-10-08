@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { addMinutes, formatISO } from 'date-fns'
+import { formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
-import { clearFiredForOccurrence, clearSnoozeForEvent } from '../../domain/reschedule'
+import { clearFiredForOccurrence, clearSnoozeForEvent, postponedStart } from '../../domain/reschedule'
 import {
   consumeReminderPayload,
   isTauri,
@@ -256,16 +256,14 @@ export function ReminderWindow({
   async function applyShort(atIndex = shortIndex) {
     if (!data) return
     const opt = SHORT_OPTIONS[atIndex] ?? SHORT_OPTIONS[0]
-    const base = new Date(data.startsAt)
-    if (Number.isNaN(base.getTime())) return
-    await rescheduleTo(addMinutes(base, opt.minutes), opt.label, { preserveTitle: true })
+    const next = postponedStart(new Date(), opt.minutes, data.reminderMinutes)
+    await rescheduleTo(next, opt.label, { preserveTitle: true })
   }
 
   async function applyLong(atIndex = longIndex) {
     if (!data) return
     const opt = LONG_OPTIONS[atIndex] ?? LONG_OPTIONS[0]
-    const base = new Date(data.startsAt)
-    const next = addMinutes(base, opt.minutes)
+    const next = postponedStart(new Date(), opt.minutes, data.reminderMinutes)
     await rescheduleTo(next, opt.label)
   }
 

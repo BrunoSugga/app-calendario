@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { movedScheduleWindow, withReagendadoPrefix } from './reschedule'
+import { addMinutes } from 'date-fns'
+import { movedScheduleWindow, postponedStart, withReagendadoPrefix } from './reschedule'
 
 describe('withReagendadoPrefix', () => {
   it('prefija el título', () => {
@@ -13,6 +14,36 @@ describe('withReagendadoPrefix', () => {
 
   it('cubre título vacío', () => {
     expect(withReagendadoPrefix('')).toBe('REAGENDADO · Sin título')
+  })
+})
+
+describe('postponedStart', () => {
+  const seenAt = new Date('2026-10-08T19:10:00.000Z')
+
+  it('cuenta el plazo desde que se pospone, no desde la hora original', () => {
+    expect(postponedStart(seenAt, 5, 0).toISOString()).toBe('2026-10-08T19:15:00.000Z')
+    expect(postponedStart(seenAt, 24 * 60, 0).toISOString()).toBe('2026-10-09T19:10:00.000Z')
+  })
+
+  it('conserva el anticipo para que el próximo aviso quede en el futuro', () => {
+    const start = postponedStart(seenAt, 5, 15)
+    expect(addMinutes(start, -15).toISOString()).toBe('2026-10-08T19:15:00.000Z')
+  })
+
+  it('mueve el fin la misma cantidad al posponer una tarea', () => {
+    const start = postponedStart(seenAt, 5, 0)
+    const moved = movedScheduleWindow(
+      new Date('2026-10-08T19:00:00.000Z'),
+      new Date('2026-10-08T20:00:00.000Z'),
+      start,
+      'task',
+    )
+    expect(moved.startsAt.toISOString()).toBe('2026-10-08T19:15:00.000Z')
+    expect(moved.endsAt.toISOString()).toBe('2026-10-08T20:15:00.000Z')
+  })
+
+  it('rechaza una hora de acción inválida', () => {
+    expect(Number.isNaN(postponedStart(new Date(NaN), 5, 0).getTime())).toBe(true)
   })
 })
 
