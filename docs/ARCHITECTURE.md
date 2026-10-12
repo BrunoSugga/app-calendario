@@ -104,6 +104,8 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **Serie periódica:** si hay varias repeticiones vencidas, solo abre aviso la más reciente. Las anteriores se marcan vistas, porque ya existe una posterior.
   - Steppers: flechas ciclan; **clic** aplica; **doble clic** abre lista para elegir directo.
   - Acciones del aviso (fila): Descartar → Reagendar → Abrir (tareas: + Empezar tarea).
+- **Estado visible de una tarea periódica:** `task_status` sigue en el evento maestro. En la grilla (día, semana y mes), el tooltip, la agenda, el modal y el Organizador, «Terminada» o «En curso» solo se muestran en la repetición de esa corrida. El ancla es `task_started_at` y, si no está, `task_completed_at`. Gana el bloque que contiene ese instante; si cae en un hueco, el de inicio efectivo más cercano. Las demás repeticiones quedan pendientes. Una tarea no periódica conserva el estado del maestro.
+- **Aviso de inicio con la tarea ya empezada:** si esa ocurrencia está en curso, no vuelve a abrir el recordatorio de inicio (popup ni notificación nativa), aunque se haya aplazado y el disparo se haya limpiado. El próximo aviso de esa corrida es el de fin de hora. Una repetición posterior que todavía no empezó sí puede sonar. Eventos y recordatorios no se empiezan y no cambian.
 - **Fin de una tarea en curso:** si `task_status` es `in_progress` y llega la hora de fin del bloque que se está haciendo, `useTaskEndPrompts` abre un aviso «¿Ya terminaste esta tarea?». Si esa ocurrencia se aplazó, la pregunta usa el fin ya movido: no aparece al pulsar **Empezar tarea**.
   - En una serie, si ya empezó una repetición posterior, la ejecución vieja se cierra sola (`completeTask`) y no dispara un aviso por cada día pasado.
   - **Sí:** `completeTask` (igual que terminar desde el modal).
@@ -131,7 +133,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.8** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.9** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

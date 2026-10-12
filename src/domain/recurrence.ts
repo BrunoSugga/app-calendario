@@ -219,6 +219,182 @@ function monthlyDateOccurrences(
   return dates
 }
 
+/** Ventana para ubicar la corrida: cubre un mes de aplazamiento y la repetición vecina. */
+const TASK_RUN_LOOKUP_MS = 70 * 24 * 60 * 60 * 1000
+
+type RecurringSlot = {
+  title: string
+  description: string
+  startsAt: Date
+  endsAt: Date
+  allDay: boolean
+  reminderMinutes: number
+  original: Date
+}
+
+function taskRunAnchor(event: CalendarEvent): Date | null {
+  const iso = event.task_started_at ?? event.task_completed_at
+  if (!iso) return null
+  const anchor = new Date(iso)
+  return Number.isNaN(anchor.getTime()) ? null : anchor
+}
+
+/**
+ * La corrida pertenece al bloque que contiene el ancla.
+ * Si cae en un hueco, al de inicio efectivo más cercano (empate: el anterior).
+ */
+function owningOriginalMs(
+  candidates: { originalMs: number; startsAt: Date; endsAt: Date }[],
+  anchor: Date,
+): number | null {
+  if (candidates.length === 0) return null
+  const at = anchor.getTime()
+  const containing = candidates.filter(
+    (candidate) => candidate.startsAt.getTime() <= at && at <= candidate.endsAt.getTime(),
+  )
+  const pool = containing.length > 0 ? containing : candidates
+  let best = pool[0]
+  let bestDist = Math.abs(best.startsAt.getTime() - at)
+  for (const candidate of pool.slice(1)) {
+    const dist = Math.abs(candidate.startsAt.getTime() - at)
+    const earlierTie = dist === bestDist && candidate.startsAt.getTime() < best.startsAt.getTime()
+    if (dist < bestDist || earlierTie) {
+      best = candidate
+      bestDist = dist
+    }
+  }
+  return best.originalMs
+}
+
+function occurrenceTaskStatus(
+  event: CalendarEvent,
+  isRecurring: boolean,
+  originalMs: number,
+  ownerMs: number | null,
+): Occurrence['taskStatus'] {
+  if (event.kind !== 'task') return event.task_status ?? null
+  const master = event.task_status ?? 'pending'
+  if (!isRecurring) return master
+  if (master !== 'done' && master !== 'in_progress') return master
+  if (ownerMs == null || originalMs !== ownerMs) return 'pending'
+  return master
+}
+
+function recurringSlots(
+  event: CalendarEvent,
+  rangeStart: Date,
+  rangeEnd: Date,
+  exceptions: EventException[],
+  durationMs: number,
+): RecurringSlot[] {
+  if (!event.rrule) return []
+
+  let rule: RRule
+  try {
+    rule = rrulestr(event.rrule, { dtstart: new Date(event.starts_at) }) as RRule
+  } catch {
+    return []
+  }
+
+  const eventExceptions = exceptions.filter((ex) => ex.event_id === event.id)
+  const monthDay = monthDayFromRRule(event.rrule)
+  const dates =
+    monthDay !== null && presetFromRRule(event.rrule) === 'monthly-date'
+      ? monthlyDateOccurrences(rule, new Date(event.starts_at), rangeStart, rangeEnd, monthDay)
+      : rule.between(rangeStart, rangeEnd, true)
+  const slots: RecurringSlot[] = []
+  const seenOriginals = new Set<number>()
+
+  for (const original of dates) {
+    seenOriginals.add(original.getTime())
+    const cancelled = eventExceptions.some(
+      (ex) => ex.is_cancelled && new Date(ex.original_starts_at).getTime() === original.getTime(),
+    )
+    if (cancelled) continue
+
+    const override = eventExceptions.find(
+      (ex) => !ex.is_cancelled && new Date(ex.original_starts_at).getTime() === original.getTime(),
+    )
+    const startsAt = override?.starts_at ? new Date(override.starts_at) : original
+    const endsAt = override?.ends_at
+      ? new Date(override.ends_at)
+      : addMilliseconds(original, durationMs)
+    slots.push({
+      title: override?.title ?? event.title,
+      description: override?.description ?? event.description,
+      startsAt,
+      endsAt,
+      allDay: override?.all_day ?? event.all_day,
+      reminderMinutes: override?.reminder_minutes ?? event.reminder_minutes,
+      original,
+    })
+  }
+
+  // Un aplazamiento puede dejar el horario original fuera del rango y el nuevo adentro.
+  for (const ex of eventExceptions) {
+    if (ex.is_cancelled || !ex.starts_at) continue
+    const original = new Date(ex.original_starts_at)
+    if (Number.isNaN(original.getTime()) || seenOriginals.has(original.getTime())) continue
+    const startsAt = new Date(ex.starts_at)
+    const endsAt = ex.ends_at ? new Date(ex.ends_at) : addMilliseconds(startsAt, durationMs)
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) continue
+    if (endsAt < rangeStart || startsAt > rangeEnd) continue
+    seenOriginals.add(original.getTime())
+    slots.push({
+      title: ex.title ?? event.title,
+      description: ex.description ?? event.description,
+      startsAt,
+      endsAt,
+      allDay: ex.all_day ?? event.all_day,
+      reminderMinutes: ex.reminder_minutes ?? event.reminder_minutes,
+      original,
+    })
+  }
+
+  return slots
+}
+
+function findTaskRunOriginalMs(event: CalendarEvent, exceptions: EventException[]): number | null {
+  const anchor = taskRunAnchor(event)
+  if (!anchor || !event.rrule) return null
+  const durationMs = differenceInMilliseconds(new Date(event.ends_at), new Date(event.starts_at))
+  const slots = recurringSlots(
+    event,
+    new Date(anchor.getTime() - TASK_RUN_LOOKUP_MS),
+    new Date(anchor.getTime() + TASK_RUN_LOOKUP_MS),
+    exceptions,
+    durationMs,
+  )
+  return owningOriginalMs(
+    slots.map((slot) => ({
+      originalMs: slot.original.getTime(),
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+    })),
+    anchor,
+  )
+}
+
+/** Estado visible de una ocurrencia. En una serie, done/in_progress solo pinta esa corrida. */
+export function taskStatusForOccurrence(
+  event: CalendarEvent,
+  occurrence: Pick<Occurrence, 'isRecurring' | 'originalStartsAt'> | null | undefined,
+  exceptions: EventException[] = [],
+): Occurrence['taskStatus'] {
+  if (event.kind !== 'task') return event.task_status ?? null
+  if (!event.rrule || occurrence?.isRecurring === false) return event.task_status ?? 'pending'
+  const ownerMs =
+    event.task_status === 'done' || event.task_status === 'in_progress'
+      ? findTaskRunOriginalMs(event, exceptions)
+      : null
+  return occurrenceTaskStatus(
+    event,
+    true,
+    occurrence?.originalStartsAt.getTime() ?? Number.NaN,
+    ownerMs,
+  )
+}
+
 function expandMaster(
   event: CalendarEvent,
   calendar: Calendar,
@@ -257,89 +433,32 @@ function expandMaster(
         isRecurring: false,
         originalStartsAt: start,
         kind: event.kind ?? 'event',
-        taskStatus: event.task_status ?? null,
+        taskStatus: occurrenceTaskStatus(event, false, start.getTime(), null),
       },
     ]
   }
 
-  let rule: RRule
-  try {
-    rule = rrulestr(event.rrule, { dtstart: new Date(event.starts_at) }) as RRule
-  } catch {
-    return []
-  }
+  const ownerMs =
+    event.kind === 'task' && (event.task_status === 'done' || event.task_status === 'in_progress')
+      ? findTaskRunOriginalMs(event, exceptions)
+      : null
+  const slots = recurringSlots(event, rangeStart, rangeEnd, exceptions, durationMs)
 
-  const monthDay = monthDayFromRRule(event.rrule)
-  const dates =
-    monthDay !== null && presetFromRRule(event.rrule) === 'monthly-date'
-      ? monthlyDateOccurrences(rule, new Date(event.starts_at), rangeStart, rangeEnd, monthDay)
-      : rule.between(rangeStart, rangeEnd, true)
-  const occurrences: Occurrence[] = []
-  const seenOriginals = new Set<number>()
-
-  for (const original of dates) {
-    seenOriginals.add(original.getTime())
-    const cancelled = eventExceptions.some(
-      (ex) =>
-        ex.is_cancelled && new Date(ex.original_starts_at).getTime() === original.getTime(),
-    )
-    if (cancelled) continue
-
-    const override = eventExceptions.find(
-      (ex) =>
-        !ex.is_cancelled && new Date(ex.original_starts_at).getTime() === original.getTime(),
-    )
-
-    const startsAt = override?.starts_at ? new Date(override.starts_at) : original
-    const endsAt = override?.ends_at
-      ? new Date(override.ends_at)
-      : addMilliseconds(original, durationMs)
-
-    occurrences.push({
-      eventId: event.id,
-      calendarId: event.calendar_id,
-      title: override?.title ?? event.title,
-      description: override?.description ?? event.description,
-      startsAt,
-      endsAt,
-      allDay: override?.all_day ?? event.all_day,
-      reminderMinutes: override?.reminder_minutes ?? event.reminder_minutes,
-      color: calendar.color,
-      isRecurring: true,
-      originalStartsAt: original,
-      kind: event.kind ?? 'event',
-      taskStatus: event.task_status ?? null,
-    })
-  }
-
-  // Un aplazamiento puede dejar el horario original fuera del rango y el nuevo adentro.
-  for (const ex of eventExceptions) {
-    if (ex.is_cancelled || !ex.starts_at) continue
-    const original = new Date(ex.original_starts_at)
-    if (Number.isNaN(original.getTime()) || seenOriginals.has(original.getTime())) continue
-    const startsAt = new Date(ex.starts_at)
-    const endsAt = ex.ends_at ? new Date(ex.ends_at) : addMilliseconds(startsAt, durationMs)
-    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) continue
-    if (endsAt < rangeStart || startsAt > rangeEnd) continue
-    seenOriginals.add(original.getTime())
-    occurrences.push({
-      eventId: event.id,
-      calendarId: event.calendar_id,
-      title: ex.title ?? event.title,
-      description: ex.description ?? event.description,
-      startsAt,
-      endsAt,
-      allDay: ex.all_day ?? event.all_day,
-      reminderMinutes: ex.reminder_minutes ?? event.reminder_minutes,
-      color: calendar.color,
-      isRecurring: true,
-      originalStartsAt: original,
-      kind: event.kind ?? 'event',
-      taskStatus: event.task_status ?? null,
-    })
-  }
-
-  return occurrences
+  return slots.map((slot) => ({
+    eventId: event.id,
+    calendarId: event.calendar_id,
+    title: slot.title,
+    description: slot.description,
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    allDay: slot.allDay,
+    reminderMinutes: slot.reminderMinutes,
+    color: calendar.color,
+    isRecurring: true as const,
+    originalStartsAt: slot.original,
+    kind: event.kind ?? 'event',
+    taskStatus: occurrenceTaskStatus(event, true, slot.original.getTime(), ownerMs),
+  }))
 }
 
 export function expandOccurrences(

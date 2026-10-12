@@ -342,6 +342,236 @@ describe('expandOccurrences', () => {
     ])
   })
 
+  it('una tarea no periódica terminada sigue terminada', () => {
+    const occ = expandOccurrences(
+      [
+        event({
+          kind: 'task',
+          title: 'Informe único',
+          starts_at: '2026-08-05T15:00:00.000Z',
+          ends_at: '2026-08-05T16:00:00.000Z',
+          task_status: 'done',
+          task_started_at: '2026-08-05T15:05:00.000Z',
+          task_completed_at: '2026-08-05T15:40:00.000Z',
+        }),
+      ],
+      [cal],
+      [],
+      rangeStart,
+      rangeEnd,
+    )
+    expect(occ).toHaveLength(1)
+    expect(occ[0].taskStatus).toBe('done')
+  })
+
+  it('en una serie, Terminada solo pinta la repetición de esa corrida', () => {
+    const startsAt = new Date('2026-10-11T15:10:00.000Z')
+    const master = event({
+      kind: 'task',
+      title: 'INFORME: PROMOCIONES',
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'done',
+      task_started_at: '2026-10-11T15:12:00.000Z',
+      task_completed_at: '2026-10-11T15:35:00.000Z',
+    })
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date('2026-10-11T00:00:00.000Z'),
+      new Date('2026-10-13T23:59:59.999Z'),
+    )
+    const statusByStart = new Map(occ.map((item) => [item.startsAt.toISOString(), item.taskStatus]))
+    expect(statusByStart.get('2026-10-11T15:10:00.000Z')).toBe('done')
+    expect(statusByStart.get('2026-10-12T15:10:00.000Z')).toBe('pending')
+    expect(statusByStart.get('2026-10-13T15:10:00.000Z')).toBe('pending')
+  })
+
+  it('en hora local, el día siguiente no hereda Terminada', () => {
+    const start = new Date(2026, 9, 11, 12, 10, 0, 0)
+    const end = new Date(2026, 9, 11, 12, 40, 0, 0)
+    const master = event({
+      kind: 'task',
+      title: 'INFORME: PROMOCIONES',
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
+      rrule: buildRRule('daily', start),
+      task_status: 'done',
+      task_started_at: new Date(2026, 9, 11, 12, 12, 0, 0).toISOString(),
+      task_completed_at: new Date(2026, 9, 11, 12, 40, 0, 0).toISOString(),
+    })
+
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date(2026, 9, 11, 0, 0, 0, 0),
+      new Date(2026, 9, 13, 23, 59, 59, 999),
+    )
+    const byDay = new Map(occ.map((item) => [item.startsAt.getDate(), item.taskStatus]))
+    expect(byDay.get(11)).toBe('done')
+    expect(byDay.get(12)).toBe('pending')
+    expect(byDay.get(13)).toBe('pending')
+    expect(occ.find((item) => item.startsAt.getDate() === 11)?.startsAt.getHours()).toBe(12)
+    expect(occ.find((item) => item.startsAt.getDate() === 11)?.startsAt.getMinutes()).toBe(10)
+  })
+
+  it('cerrar justo al fin, o un instante después, no marca la repetición siguiente', () => {
+    const startsAt = new Date('2026-10-11T15:10:00.000Z')
+    const endsAt = new Date('2026-10-11T15:40:00.000Z')
+    const base = event({
+      kind: 'task',
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'done',
+      task_started_at: '2026-10-11T15:12:00.000Z',
+    })
+
+    for (const completedAt of ['2026-10-11T15:40:00.000Z', '2026-10-11T15:40:00.001Z']) {
+      const occ = expandOccurrences(
+        [event({ ...base, id: completedAt, task_completed_at: completedAt })],
+        [cal],
+        [],
+        new Date('2026-10-11T00:00:00.000Z'),
+        new Date('2026-10-12T23:59:59.999Z'),
+      )
+      expect(occ.find((item) => item.startsAt.toISOString() === startsAt.toISOString())?.taskStatus).toBe(
+        'done',
+      )
+      expect(
+        occ.find((item) => item.startsAt.toISOString() === '2026-10-12T15:10:00.000Z')?.taskStatus,
+      ).toBe('pending')
+    }
+  })
+
+  it('en curso solo la corrida abierta; la repetición posterior queda pendiente', () => {
+    const startsAt = new Date('2026-10-11T15:10:00.000Z')
+    const master = event({
+      kind: 'task',
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'in_progress',
+      task_started_at: '2026-10-12T15:05:00.000Z',
+      task_completed_at: null,
+    })
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date('2026-10-11T00:00:00.000Z'),
+      new Date('2026-10-13T23:59:59.999Z'),
+    )
+    const statusByStart = new Map(occ.map((item) => [item.startsAt.toISOString(), item.taskStatus]))
+    expect(statusByStart.get('2026-10-11T15:10:00.000Z')).toBe('pending')
+    expect(statusByStart.get('2026-10-12T15:10:00.000Z')).toBe('in_progress')
+    expect(statusByStart.get('2026-10-13T15:10:00.000Z')).toBe('pending')
+  })
+
+  it('un aplazamiento no hace que la repetición nueva herede el cierre anterior', () => {
+    const startsAt = new Date('2026-10-11T15:10:00.000Z')
+    const master = event({
+      kind: 'task',
+      title: 'INFORME: PROMOCIONES',
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'done',
+      task_started_at: '2026-10-11T15:12:00.000Z',
+      task_completed_at: '2026-10-11T15:35:00.000Z',
+    })
+    const moved: EventException = {
+      id: 'ex-promo',
+      event_id: master.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-10-12T15:10:00.000Z',
+      is_cancelled: false,
+      title: null,
+      description: null,
+      starts_at: '2026-10-12T18:10:00.000Z',
+      ends_at: '2026-10-12T18:40:00.000Z',
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-10-12T15:00:00.000Z',
+    }
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [moved],
+      new Date('2026-10-11T00:00:00.000Z'),
+      new Date('2026-10-12T23:59:59.999Z'),
+    )
+    const previous = occ.find((item) => item.startsAt.toISOString() === '2026-10-11T15:10:00.000Z')
+    const current = occ.find((item) => item.originalStartsAt.toISOString() === '2026-10-12T15:10:00.000Z')
+    expect(previous?.taskStatus).toBe('done')
+    expect(current?.startsAt.toISOString()).toBe('2026-10-12T18:10:00.000Z')
+    expect(current?.taskStatus).toBe('pending')
+  })
+
+  it('empezar antes del bloque aplazado marca esa ocurrencia en curso', () => {
+    const startsAt = new Date('2026-10-12T15:10:00.000Z')
+    const master = event({
+      kind: 'task',
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-10-12T15:40:00.000Z',
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'in_progress',
+      task_started_at: '2026-10-12T18:00:00.000Z',
+      task_completed_at: null,
+    })
+    const moved: EventException = {
+      id: 'ex-open',
+      event_id: master.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-10-12T15:10:00.000Z',
+      is_cancelled: false,
+      title: null,
+      description: null,
+      starts_at: '2026-10-12T18:10:00.000Z',
+      ends_at: '2026-10-12T18:40:00.000Z',
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-10-12T15:00:00.000Z',
+    }
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [moved],
+      new Date('2026-10-12T00:00:00.000Z'),
+      new Date('2026-10-13T23:59:59.999Z'),
+    )
+    const current = occ.find((item) => item.originalStartsAt.toISOString() === '2026-10-12T15:10:00.000Z')
+    const next = occ.find((item) => item.startsAt.toISOString() === '2026-10-13T15:10:00.000Z')
+    expect(current?.taskStatus).toBe('in_progress')
+    expect(next?.taskStatus).toBe('pending')
+  })
+
+  it('una serie terminada sin ancla de corrida no pinta todas las repeticiones', () => {
+    const startsAt = new Date('2026-10-11T15:10:00.000Z')
+    const master = event({
+      kind: 'task',
+      starts_at: startsAt.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', startsAt),
+      task_status: 'done',
+      task_started_at: 'no-es-fecha',
+      task_completed_at: null,
+    })
+    const occ = expandOccurrences(
+      [master],
+      [cal],
+      [],
+      new Date('2026-10-11T00:00:00.000Z'),
+      new Date('2026-10-12T23:59:59.999Z'),
+    )
+    expect(occ.length).toBeGreaterThan(0)
+    expect(occ.every((item) => item.taskStatus === 'pending')).toBe(true)
+  })
+
   it('ordena por hora de inicio', () => {
     const occ = expandOccurrences(
       [

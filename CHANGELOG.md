@@ -4,6 +4,13 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.9] — 2026-10-12
+
+### Fixed
+
+- Una tarea periódica ya no figura como «Terminada» en las repeticiones posteriores a la que se completó. La nueva queda pendiente, o en curso solo si esa corrida sigue abierta.
+- Si una tarea ya se empezó, no vuelve a sonar el aviso de inicio de esa ocurrencia. El próximo aviso es el de fin de hora.
+
 ## [1.2.8] — 2026-10-08
 
 ### Fixed

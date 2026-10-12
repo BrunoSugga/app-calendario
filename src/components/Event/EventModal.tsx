@@ -4,6 +4,7 @@ import type {
   Calendar,
   CalendarEvent,
   EventDraft,
+  EventException,
   EventKind,
   Occurrence,
   TaskRun,
@@ -15,6 +16,7 @@ import {
   monthDayFromRRule,
   presetFromRRule,
   recurrenceEndFromRRule,
+  taskStatusForOccurrence,
   weekdaysFromRRule,
   type RecurrencePreset,
   type WeekdayIndex,
@@ -25,6 +27,7 @@ type Props = {
   open: boolean
   calendars: Calendar[]
   events?: CalendarEvent[]
+  exceptions?: EventException[]
   taskRuns?: TaskRun[]
   initial?: Partial<EventDraft> & { occurrence?: Occurrence; master?: CalendarEvent }
   onClose: () => void
@@ -50,6 +53,7 @@ export function EventModal({
   open,
   calendars,
   events = [],
+  exceptions = [],
   taskRuns = [],
   initial,
   onClose,
@@ -89,6 +93,10 @@ export function EventModal({
   const runsForEvent = useMemo(
     () => (initial?.id ? taskRuns.filter((r) => r.event_id === initial.id).slice(0, 5) : []),
     [taskRuns, initial?.id],
+  )
+  const shownTaskStatus = useMemo(
+    () => (master ? taskStatusForOccurrence(master, initial?.occurrence, exceptions) : null),
+    [master, initial?.occurrence, exceptions],
   )
 
   useEffect(() => {
@@ -424,7 +432,7 @@ export function EventModal({
           <section className="task-panel">
             <h3>Estado de la tarea</h3>
             <p>
-              <strong>{taskStatusLabel(master.task_status)}</strong>
+              <strong>{taskStatusLabel(shownTaskStatus)}</strong>
               {master.task_duration_ms != null && (
                 <> · Duración: {formatDuration(master.task_duration_ms)}</>
               )}

@@ -1,5 +1,5 @@
 import { buildMonthCells, isSameDay, isSameMonth } from '../../domain/dates'
-import { kindColor, kindGlyph } from '../../domain/eventKind'
+import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 type Props = {
@@ -43,12 +43,16 @@ export function MonthView({
             >
               <div className="month-cell-num">{day.getDate()}</div>
               <div className="month-cell-events">
-                {dayOcc.slice(0, 3).map((occ) => (
+                {dayOcc.slice(0, 3).map((occ) => {
+                  const status =
+                    occ.kind === 'task' ? ` · ${taskStatusLabel(occ.taskStatus)}` : ''
+                  return (
                   <button
                     key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                     type="button"
                     className={`month-event kind-${occ.kind}`}
                     style={{ background: kindColor(occ.kind, occ.color) }}
+                    title={`${kindLabel(occ.kind)}: ${occ.title}${status}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       onOccurrenceClick(occ)
@@ -59,7 +63,8 @@ export function MonthView({
                     </span>{' '}
                     {occ.title}
                   </button>
-                ))}
+                  )
+                })}
                 {dayOcc.length > 3 && (
                   <span className="more-events">+{dayOcc.length - 3} más</span>
                 )}

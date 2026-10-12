@@ -24,7 +24,7 @@ function occ(partial: Partial<Occurrence> & { eventId: string; startsAt: Date })
     isRecurring: false,
     originalStartsAt: partial.originalStartsAt ?? startsAt,
     kind: partial.kind ?? 'event',
-    taskStatus: null,
+    taskStatus: partial.taskStatus ?? null,
   }
 }
 
@@ -83,6 +83,35 @@ describe('native reminder schedule', () => {
     expect(items).toHaveLength(1)
     expect(items[0]?.at.getDay()).toBe(5) // viernes
     expect(items[0]?.at.getHours()).toBe(8)
+  })
+
+  it('no programa el aviso de inicio de una tarea ya en curso', () => {
+    const items = scheduleFromOccurrences(
+      [
+        occ({
+          eventId: 'task-open',
+          startsAt: addMinutes(now, 30),
+          kind: 'task',
+          taskStatus: 'in_progress',
+          title: 'En curso',
+        }),
+        occ({
+          eventId: 'task-next',
+          startsAt: addMinutes(now, 60),
+          kind: 'task',
+          taskStatus: 'pending',
+          title: 'Pendiente',
+        }),
+        occ({
+          eventId: 'evt-1',
+          startsAt: addMinutes(now, 90),
+          kind: 'event',
+          title: 'Reunión',
+        }),
+      ],
+      { now, calendars: [{ id: 'cal-1', name: 'Personal' }] },
+    )
+    expect(items.map((item) => item.extra.eventId)).toEqual(['task-next', 'evt-1'])
   })
 
   it('parseNotificationExtra rechaza ids/ISO inválidos y acepta extras limpios', () => {

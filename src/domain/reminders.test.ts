@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { addDays, addMinutes } from 'date-fns'
-import type { Occurrence } from '../types'
+import type { Calendar, CalendarEvent, EventException, Occurrence } from '../types'
+import { buildRRule, expandOccurrences } from './recurrence'
 import {
   collapseSupersededDueReminders,
   isOccurrenceAncientMissed,
@@ -370,6 +371,206 @@ describe('pipeline expand + due (regresión recordatorio duración 0)', () => {
     const fixed = expandOccurrences(events, calendars, [], range.start, range.end)
     expect(fixed).toHaveLength(1)
     expect(selectDueReminders(fixed, now, new Set()).map((o) => o.eventId)).toEqual(['evt-1'])
+  })
+})
+
+describe('aviso de inicio con la tarea ya en curso', () => {
+  const calendar: Calendar = {
+    id: 'cal-1',
+    user_id: 'user-1',
+    name: 'Personal',
+    color: '#2F7FD4',
+    is_default: true,
+    visible: true,
+    created_at: '2026-10-01T00:00:00.000Z',
+  }
+
+  function task(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+    return {
+      id: 'task-1',
+      user_id: 'user-1',
+      calendar_id: 'cal-1',
+      title: 'INFORME: PROMOCIONES',
+      description: '',
+      starts_at: '2026-10-12T15:10:00.000Z',
+      ends_at: '2026-10-12T15:40:00.000Z',
+      all_day: false,
+      reminder_minutes: 0,
+      rrule: null,
+      kind: 'task',
+      task_status: 'in_progress',
+      task_started_at: '2026-10-12T18:00:00.000Z',
+      task_completed_at: null,
+      task_duration_ms: null,
+      task_note: null,
+      created_at: '2026-10-01T00:00:00.000Z',
+      updated_at: '2026-10-12T18:00:00.000Z',
+      ...overrides,
+    }
+  }
+
+  it('no vuelve a sonar el inicio si esa tarea ya está en curso', () => {
+    const startsAt = new Date('2026-10-12T18:10:00.000Z')
+    const now = new Date('2026-10-12T18:10:05.000Z')
+    const underway = occ({
+      kind: 'task',
+      taskStatus: 'in_progress',
+      startsAt,
+      endsAt: new Date('2026-10-12T18:40:00.000Z'),
+      originalStartsAt: startsAt,
+      reminderMinutes: 0,
+    })
+    const pending = occ({
+      eventId: 'task-next',
+      kind: 'task',
+      taskStatus: 'pending',
+      startsAt,
+      endsAt: new Date('2026-10-12T18:40:00.000Z'),
+      originalStartsAt: startsAt,
+      reminderMinutes: 0,
+    })
+    const reminder = occ({
+      eventId: 'rem-1',
+      kind: 'reminder',
+      taskStatus: null,
+      startsAt,
+      endsAt: startsAt,
+      originalStartsAt: startsAt,
+      reminderMinutes: 0,
+    })
+    expect(isOccurrenceDueForReminder(underway, now)).toBe(false)
+    expect(selectDueReminders([underway, reminder], now, new Set()).map((item) => item.eventId)).toEqual([
+      'rem-1',
+    ])
+    expect(selectDueReminders([pending], now, new Set()).map((item) => item.eventId)).toEqual(['task-next'])
+  })
+
+  it('una tarea en curso tampoco entra al resumen de avisos antiguos', () => {
+    const now = new Date('2026-08-20T12:00:00.000-03:00')
+    const startsAt = addDays(now, -20)
+    const lastScan = addDays(now, -30)
+    const item = occ({
+      kind: 'task',
+      taskStatus: 'in_progress',
+      startsAt,
+      endsAt: startsAt,
+      originalStartsAt: startsAt,
+      reminderMinutes: 0,
+    })
+    expect(isOccurrenceAncientMissed(item, now, { lastScan })).toBe(false)
+    expect(partitionMissedReminders([item], now, new Set(), { lastScan })).toEqual({
+      due: [],
+      ancient: [],
+    })
+  })
+
+  it('la ocurrencia aplazada y ya empezada no suena; la siguiente pendiente sí', () => {
+    const seriesStart = new Date('2026-10-11T15:10:00.000Z')
+    const master = task({
+      starts_at: seriesStart.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', seriesStart),
+      task_status: 'in_progress',
+      task_started_at: '2026-10-12T18:00:00.000Z',
+    })
+    const moved: EventException = {
+      id: 'ex-1',
+      event_id: master.id,
+      user_id: 'user-1',
+      original_starts_at: '2026-10-12T15:10:00.000Z',
+      is_cancelled: false,
+      title: null,
+      description: null,
+      starts_at: '2026-10-12T18:10:00.000Z',
+      ends_at: '2026-10-12T18:40:00.000Z',
+      all_day: null,
+      reminder_minutes: null,
+      created_at: '2026-10-12T15:00:00.000Z',
+    }
+    const occs = expandOccurrences(
+      [master],
+      [calendar],
+      [moved],
+      new Date('2026-10-11T00:00:00.000Z'),
+      new Date('2026-10-13T23:59:59.999Z'),
+    )
+    const current = occs.find((item) => item.originalStartsAt.toISOString() === '2026-10-12T15:10:00.000Z')
+    const next = occs.find((item) => item.startsAt.toISOString() === '2026-10-13T15:10:00.000Z')
+    expect(current?.taskStatus).toBe('in_progress')
+    expect(next?.taskStatus).toBe('pending')
+    expect(
+      selectDueReminders([current!], new Date('2026-10-12T18:10:05.000Z'), new Set()),
+    ).toEqual([])
+    expect(
+      selectDueReminders([next!], new Date('2026-10-13T15:10:05.000Z'), new Set()).map(
+        (item) => item.startsAt.toISOString(),
+      ),
+    ).toEqual(['2026-10-13T15:10:00.000Z'])
+  })
+
+  it('si la corrida anterior ya terminó, la repetición nueva sí puede sonar', () => {
+    const seriesStart = new Date('2026-10-11T15:10:00.000Z')
+    const master = task({
+      starts_at: seriesStart.toISOString(),
+      ends_at: '2026-10-11T15:40:00.000Z',
+      rrule: buildRRule('daily', seriesStart),
+      task_status: 'done',
+      task_started_at: '2026-10-11T15:12:00.000Z',
+      task_completed_at: '2026-10-11T15:35:00.000Z',
+    })
+    const eventAtSameTime = task({
+      id: 'evt-1',
+      kind: 'event',
+      title: 'Reunión',
+      starts_at: '2026-10-12T15:10:00.000Z',
+      ends_at: '2026-10-12T15:40:00.000Z',
+      rrule: null,
+      task_status: null,
+      task_started_at: null,
+      task_completed_at: null,
+    })
+    const occs = expandOccurrences(
+      [master, eventAtSameTime],
+      [calendar],
+      [],
+      new Date('2026-10-12T15:00:00.000Z'),
+      new Date('2026-10-12T16:00:00.000Z'),
+    )
+    const nextTask = occs.find((item) => item.eventId === master.id)
+    expect(nextTask?.taskStatus).toBe('pending')
+    expect(
+      selectDueReminders(occs, new Date('2026-10-12T15:10:05.000Z'), new Set())
+        .map((item) => item.eventId)
+        .sort(),
+    ).toEqual(['evt-1', master.id].sort())
+  })
+
+  it('una tarea no periódica en curso no suena; un evento a la misma hora sí', () => {
+    const master = task({
+      starts_at: '2026-10-12T18:10:00.000Z',
+      ends_at: '2026-10-12T18:40:00.000Z',
+      task_started_at: '2026-10-12T18:00:00.000Z',
+    })
+    const meeting = task({
+      id: 'evt-1',
+      kind: 'event',
+      title: 'Reunión',
+      starts_at: '2026-10-12T18:10:00.000Z',
+      ends_at: '2026-10-12T18:40:00.000Z',
+      task_status: null,
+      task_started_at: null,
+    })
+    const occs = expandOccurrences(
+      [master, meeting],
+      [calendar],
+      [],
+      new Date('2026-10-12T18:00:00.000Z'),
+      new Date('2026-10-12T19:00:00.000Z'),
+    )
+    expect(occs.find((item) => item.eventId === master.id)?.taskStatus).toBe('in_progress')
+    expect(selectDueReminders(occs, new Date('2026-10-12T18:10:05.000Z'), new Set()).map((item) => item.eventId)).toEqual([
+      'evt-1',
+    ])
   })
 })
 

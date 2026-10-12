@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { eachDay, formatShortWeekday, formatTime, isSameDay, weekRange } from '../../domain/dates'
-import { kindColor, kindGlyph, kindLabel } from '../../domain/eventKind'
+import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -70,6 +70,8 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
                 occ.kind === 'reminder' ? 18 : 20,
               )
               const timeLabel = formatTime(occ.startsAt)
+              const status =
+                occ.kind === 'task' ? ` · ${taskStatusLabel(occ.taskStatus)}` : ''
               return (
                 <button
                   key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
@@ -83,7 +85,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
                     .filter(Boolean)
                     .join(' ')}
                   style={{ top, height, background: kindColor(occ.kind, occ.color) }}
-                  title={`${kindLabel(occ.kind)}: ${occ.title}`}
+                  title={`${kindLabel(occ.kind)}: ${occ.title}${status}`}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOccurrenceClick(occ)

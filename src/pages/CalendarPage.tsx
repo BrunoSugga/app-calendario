@@ -325,6 +325,7 @@ export function CalendarPage() {
         open={modalOpen}
         calendars={calendars}
         events={events}
+        exceptions={exceptions}
         taskRuns={taskRuns}
         initial={draft}
         onClose={() => setModalOpen(false)}

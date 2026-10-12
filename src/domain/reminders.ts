@@ -100,6 +100,13 @@ export function reminderFireKey(eventId: string, originalStartsAt: Date): string
   return `${eventId}:${originalStartsAt.toISOString()}`
 }
 
+/** La ocurrencia ya se está haciendo: no corresponde el aviso de que empieza. */
+export function isUnderwayTaskOccurrence(
+  occ: Pick<Occurrence, 'kind' | 'taskStatus'>,
+): boolean {
+  return occ.kind === 'task' && occ.taskStatus === 'in_progress'
+}
+
 export type ReminderDueOptions = {
   graceMinutes?: number
   snoozeActive?: (eventId: string) => boolean
@@ -141,10 +148,11 @@ function effectiveRemindAt(
 
 /** Elegible para popup individual (últimos 15 días desde lastScan / gracia). */
 export function isOccurrenceDueForReminder(
-  occ: Pick<Occurrence, 'eventId' | 'calendarId' | 'startsAt' | 'reminderMinutes'>,
+  occ: Pick<Occurrence, 'eventId' | 'calendarId' | 'startsAt' | 'reminderMinutes' | 'kind' | 'taskStatus'>,
   now: Date,
   options?: ReminderDueOptions,
 ): boolean {
+  if (isUnderwayTaskOccurrence(occ)) return false
   const graceMinutes = options?.graceMinutes ?? REMINDER_GRACE_MINUTES
   if (options?.snoozeActive?.(occ.eventId)) return false
 
@@ -169,10 +177,11 @@ export function isOccurrenceDueForReminder(
 
 /** Más antiguo que la ventana de popup, pero posterior a lastScan. */
 export function isOccurrenceAncientMissed(
-  occ: Pick<Occurrence, 'eventId' | 'calendarId' | 'startsAt' | 'reminderMinutes'>,
+  occ: Pick<Occurrence, 'eventId' | 'calendarId' | 'startsAt' | 'reminderMinutes' | 'kind' | 'taskStatus'>,
   now: Date,
   options?: ReminderDueOptions,
 ): boolean {
+  if (isUnderwayTaskOccurrence(occ)) return false
   const lastScan = options?.lastScan
   if (!lastScan || Number.isNaN(lastScan.getTime())) return false
   if (options?.snoozeActive?.(occ.eventId)) return false

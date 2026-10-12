@@ -1,7 +1,5 @@
 import { addMinutes, format, formatISO } from 'date-fns'
-import {
-  reminderFireKey,
-} from '../domain/reminders'
+import { isUnderwayTaskOccurrence, reminderFireKey } from '../domain/reminders'
 import { reminderLeadMinutes } from '../domain/reschedule'
 import {
   isWithinWorkHours,
@@ -134,6 +132,7 @@ export function scheduleFromOccurrences(
   const usedIds = new Set<number>()
 
   for (const occ of occurrences) {
+    if (isUnderwayTaskOccurrence(occ)) continue
     if (options.snoozeActive?.(occ.eventId)) continue
     const fireKey = reminderFireKey(occ.eventId, occ.originalStartsAt)
     if (fired.has(fireKey)) continue
