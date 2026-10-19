@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Calendar, CalendarEvent, EventException } from '../types'
+import { endOfDay, startOfDay } from './dates'
 import {
   buildRRule,
   expandOccurrences,
@@ -9,6 +10,7 @@ import {
   presetFromRRule,
   recurrenceEndFromRRule,
   weekdaysFromRRule,
+  type WeekdayIndex,
 } from './recurrence'
 
 function calendar(overrides: Partial<Calendar> = {}): Calendar {
@@ -570,6 +572,60 @@ describe('expandOccurrences', () => {
     )
     expect(occ.length).toBeGreaterThan(0)
     expect(occ.every((item) => item.taskStatus === 'pending')).toBe(true)
+  })
+
+  it('incluye dos recordatorios semanales de duración cero en el mismo lunes', () => {
+    const startsAt = new Date(2026, 9, 12, 16, 0, 0, 0)
+    const monday = new Date(2026, 9, 19, 11, 48, 0, 0)
+    const reminder = (id: string, title: string, weekdays: WeekdayIndex[]) =>
+      event({
+        id,
+        title,
+        kind: 'reminder',
+        reminder_minutes: 0,
+        starts_at: startsAt.toISOString(),
+        ends_at: startsAt.toISOString(),
+        rrule: buildRRule('weekly', startsAt, weekdays),
+      })
+
+    const occ = expandOccurrences(
+      [
+        reminder('liq', 'Descargar liq 16', [0]),
+        reminder('fa', 'Mandar detalle fa ruiz', [0, 1, 2, 3, 4]),
+      ],
+      [cal],
+      [],
+      startOfDay(monday),
+      endOfDay(monday),
+    )
+
+    expect(occ.map((item) => item.title)).toEqual(['Descargar liq 16', 'Mandar detalle fa ruiz'])
+    expect(occ.every((item) => item.startsAt.getTime() === item.endsAt.getTime())).toBe(true)
+  })
+
+  it('incluye un recordatorio de duración cero apoyado en el borde del rango', () => {
+    const day = new Date(2026, 9, 19, 15, 0, 0, 0)
+    const rangeStart = startOfDay(day)
+    const rangeEnd = endOfDay(day)
+    const onStart = event({
+      id: 'edge-start',
+      title: 'En el inicio',
+      kind: 'reminder',
+      reminder_minutes: 0,
+      starts_at: rangeStart.toISOString(),
+      ends_at: rangeStart.toISOString(),
+    })
+    const onEnd = event({
+      id: 'edge-end',
+      title: 'En el fin',
+      kind: 'reminder',
+      reminder_minutes: 0,
+      starts_at: rangeEnd.toISOString(),
+      ends_at: rangeEnd.toISOString(),
+    })
+
+    const occ = expandOccurrences([onStart, onEnd], [cal], [], rangeStart, rangeEnd)
+    expect(occ.map((item) => item.title)).toEqual(['En el inicio', 'En el fin'])
   })
 
   it('ordena por hora de inicio', () => {

@@ -118,6 +118,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir y versión visible no interactiva).
 - **Organizador de eventos:** botón junto a “Hoy” que reemplaza la grilla por una lista cronológica con búsqueda y filtros por tipo, calendario, periodicidad y estado. Los eventos simples aparecen una vez; de cada serie se muestra solo la próxima ocurrencia efectiva (o la última si la serie terminó), respetando excepciones. El historial se abre contraído en bloques de 90 días. Editar/eliminar reutiliza el alcance “esta ocurrencia / toda la serie”.
+- **Grilla de día y semana:** los bloques que comparten horario se parten en columnas. Un recordatorio dura cero (`ends_at === starts_at`) y, si otro cae en ese mismo instante, se ve al lado: antes el de arriba tapaba al de abajo. La agenda lateral lista todas las ocurrencias del día, sin ese apilado.
 - Las recurrencias pueden tener una fecha opcional **Finaliza**, persistida como `UNTIL` en el RRULE. Las series existentes sin límite se muestran como “Sin fecha de fin”.
 - La repetición mensual ofrece dos modos: por días de semana (`BYDAY`, comportamiento histórico) y por día del mes (`BYMONTHDAY`). En este último, si el día 29, 30 o 31 no existe en un mes, la expansión crea una única ocurrencia en el último día disponible; las excepciones se vinculan a esa fecha efectiva.
 - En **navegador** (no Tauri ni Capacitor): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
@@ -133,7 +134,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.9** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.10** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

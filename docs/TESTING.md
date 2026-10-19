@@ -41,7 +41,7 @@ Esta batería complementa, no reemplaza, `npm test`.
 | Dominio | fechas, recurrencia, recordatorios, semana laboral, Organizador, tareas |
 | Persistencia local | repositorio local, localStorage, backups |
 | Seguridad cliente | sanitización, contraseñas, redirects, PKCE, config móvil |
-| UI | login, EventModal, Toolbar, OrganizerView |
+| UI | login, EventModal, Toolbar, OrganizerView, vista día |
 | Bridges | Tauri, updater desktop y avisos nativos |
 
 ## Tests obligatorios según cambio

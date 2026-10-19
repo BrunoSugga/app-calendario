@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { formatShortWeekday, formatTime, isSameDay } from '../../domain/dates'
+import { eventBlockBox, layoutTimedEvents } from '../../domain/eventLayout'
 import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
@@ -19,7 +20,7 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
   const hourHeight = HOUR_PX * scale
 
   const dayEvents = useMemo(
-    () => occurrences.filter((o) => isSameDay(o.startsAt, date)),
+    () => layoutTimedEvents(occurrences.filter((o) => isSameDay(o.startsAt, date))),
     [occurrences, date],
   )
 
@@ -60,7 +61,7 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
               )}
             </div>
           ))}
-          {dayEvents.map((occ) => {
+          {dayEvents.map(({ item: occ, column, columns }) => {
             const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
             const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
             const top = (startMin / 60) * hourHeight
@@ -76,6 +77,8 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
               <button
                 key={`${occ.eventId}-${occ.originalStartsAt.toISOString()}`}
                 type="button"
+                data-column={column}
+                data-columns={columns}
                 className={[
                   'event-block',
                   height < 36 ? 'short' : '',
@@ -83,7 +86,12 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                style={{ top, height, background: kindColor(occ.kind, occ.color) }}
+                style={{
+                  top,
+                  height,
+                  ...eventBlockBox(column, columns),
+                  background: kindColor(occ.kind, occ.color),
+                }}
                 title={`${kindLabel(occ.kind)}: ${occ.title}${status}`}
                 onClick={(e) => {
                   e.stopPropagation()

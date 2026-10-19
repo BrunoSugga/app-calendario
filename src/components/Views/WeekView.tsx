@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { eachDay, formatShortWeekday, formatTime, isSameDay, weekRange } from '../../domain/dates'
+import { eventBlockBox, layoutTimedEvents } from '../../domain/eventLayout'
 import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
@@ -21,7 +22,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
   const days = eachDay(start, end)
 
   const byDay = useMemo(() => {
-    return days.map((day) => occurrences.filter((o) => isSameDay(o.startsAt, day)))
+    return days.map((day) => layoutTimedEvents(occurrences.filter((o) => isSameDay(o.startsAt, day))))
   }, [days, occurrences])
 
   return (
@@ -61,7 +62,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
             {HOURS.map((h) => (
               <div key={h} className="hour-slot" style={{ height: hourHeight }} />
             ))}
-            {byDay[idx].map((occ) => {
+            {byDay[idx].map(({ item: occ, column, columns }) => {
               const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
               const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
               const top = (startMin / 60) * hourHeight
@@ -84,7 +85,12 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  style={{ top, height, background: kindColor(occ.kind, occ.color) }}
+                  style={{
+                    top,
+                    height,
+                    ...eventBlockBox(column, columns),
+                    background: kindColor(occ.kind, occ.color),
+                  }}
                   title={`${kindLabel(occ.kind)}: ${occ.title}${status}`}
                   onClick={(e) => {
                     e.stopPropagation()

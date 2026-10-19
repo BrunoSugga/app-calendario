@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.10] — 2026-10-19
+
+### Fixed
+
+- En la vista día y en la semana, dos recordatorios a la misma hora se ven los dos, uno al lado del otro. Un recordatorio dura cero y antes el de encima tapaba al otro, como «Descargar liq 16» debajo de «Mandar detalle fa ruiz».
+
 ## [1.2.9] — 2026-10-12
 
 ### Fixed
