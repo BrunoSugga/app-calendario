@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.11] — 2026-11-02
+
+### Fixed
+
+- Aplazar un recordatorio ya no vuelve a abrir la misma ventana al instante. El plazo queda frenado hasta que vence, aunque el horario nuevo tarde en guardarse.
+
 ## [1.2.10] — 2026-10-19
 
 ### Fixed

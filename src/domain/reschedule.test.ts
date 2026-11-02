@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { addMinutes } from 'date-fns'
-import { movedScheduleWindow, postponedStart, withReagendadoPrefix } from './reschedule'
+import { reminderFireKey } from './reminders'
+import {
+  armReminderSnooze,
+  movedScheduleWindow,
+  nextReminderAt,
+  postponedStart,
+  withReagendadoPrefix,
+} from './reschedule'
 
 describe('withReagendadoPrefix', () => {
   it('prefija el título', () => {
@@ -44,6 +51,36 @@ describe('postponedStart', () => {
 
   it('rechaza una hora de acción inválida', () => {
     expect(Number.isNaN(postponedStart(new Date(NaN), 5, 0).getTime())).toBe(true)
+  })
+
+  it('el próximo aviso queda al cumplirse el plazo, no en el pasado', () => {
+    const actedAt = new Date('2026-11-02T12:28:00.000Z')
+    const start = postponedStart(actedAt, 5, 15)
+    expect(nextReminderAt(start, 15).toISOString()).toBe('2026-11-02T12:33:00.000Z')
+  })
+})
+
+describe('armReminderSnooze', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('frena el aviso ya visto sin borrar fired', () => {
+    const eventId = 'evt-bocata'
+    const original = new Date('2026-11-02T12:25:00.000Z')
+    const key = reminderFireKey(eventId, original)
+    localStorage.setItem('calendario.reminders.fired', JSON.stringify([key]))
+    const until = new Date(Date.now() + 5 * 60 * 1000)
+
+    armReminderSnooze(eventId, until)
+
+    expect(localStorage.getItem(`calendario.snooze.${eventId}`)).toBe(String(until.getTime()))
+    expect(JSON.parse(localStorage.getItem('calendario.reminders.fired') ?? '[]')).toContain(key)
+  })
+
+  it('no deja un snooze ya vencido', () => {
+    armReminderSnooze('evt-bocata', new Date('2020-01-01T00:00:00.000Z'))
+    expect(localStorage.getItem('calendario.snooze.evt-bocata')).toBeNull()
   })
 })
 

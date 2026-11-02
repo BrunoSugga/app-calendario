@@ -85,6 +85,32 @@ describe('native reminder schedule', () => {
     expect(items[0]?.at.getHours()).toBe(8)
   })
 
+  it('programa el aviso aplazado al fin del snooze', () => {
+    const startsAt = addMinutes(now, -10)
+    const until = addMinutes(now, 5).getTime()
+    const items = scheduleFromOccurrences(
+      [
+        occ({
+          eventId: 'evt-1',
+          startsAt,
+          endsAt: startsAt,
+          originalStartsAt: startsAt,
+          reminderMinutes: 0,
+          kind: 'reminder',
+          title: 'Bocata',
+        }),
+      ],
+      {
+        now,
+        calendars: [{ id: 'cal-1', name: 'Personal' }],
+        snoozeActive: () => true,
+        snoozeUntil: () => until,
+      },
+    )
+    expect(items).toHaveLength(1)
+    expect(items[0]?.at.getTime()).toBe(until)
+  })
+
   it('no programa el aviso de inicio de una tarea ya en curso', () => {
     const items = scheduleFromOccurrences(
       [

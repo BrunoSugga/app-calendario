@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
-import { clearFiredForOccurrence, clearSnoozeForEvent, postponedStart } from '../../domain/reschedule'
+import { armReminderSnooze, nextReminderAt, postponedStart } from '../../domain/reschedule'
 import {
   consumeReminderPayload,
   isTauri,
@@ -238,9 +238,9 @@ export function ReminderWindow({
       return
     }
     setBusy(true)
-    clearSnoozeForEvent(data.eventId)
-    const original = new Date(data.originalStartsAt || data.startsAt)
-    if (!Number.isNaN(original.getTime())) clearFiredForOccurrence(data.eventId, original)
+    // El snooze entra antes de avisar a la ventana principal. Si se borra `fired`
+    // en ese hueco, el scan reabre el mismo aviso al instante.
+    armReminderSnooze(data.eventId, nextReminderAt(newStartsAt, data.reminderMinutes))
     await notifyMainRescheduleEvent({
       eventId: data.eventId,
       originalStartsAt: data.originalStartsAt || data.startsAt,

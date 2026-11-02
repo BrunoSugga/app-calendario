@@ -100,6 +100,23 @@ export function reminderFireKey(eventId: string, originalStartsAt: Date): string
   return `${eventId}:${originalStartsAt.toISOString()}`
 }
 
+const reminderOpenings = new Set<string>()
+
+/**
+ * Reserva el disparo antes de abrir la ventana.
+ * Dos scans solapados no pueden abrir el mismo aviso dos o tres veces.
+ */
+export function claimReminderOpen(key: string, fired: Set<string>): boolean {
+  if (!key || fired.has(key) || reminderOpenings.has(key)) return false
+  reminderOpenings.add(key)
+  fired.add(key)
+  return true
+}
+
+export function settleReminderOpen(key: string): void {
+  reminderOpenings.delete(key)
+}
+
 /** La ocurrencia ya se está haciendo: no corresponde el aviso de que empieza. */
 export function isUnderwayTaskOccurrence(
   occ: Pick<Occurrence, 'kind' | 'taskStatus'>,

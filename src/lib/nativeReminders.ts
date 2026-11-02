@@ -54,6 +54,7 @@ export type ScheduleFromOccurrencesOptions = {
   workWeek?: WorkWeekSettings | null
   fired?: ReadonlySet<string>
   snoozeActive?: (eventId: string) => boolean
+  snoozeUntil?: (eventId: string) => number | null
   horizonHours?: number
   max?: number
 }
@@ -133,12 +134,15 @@ export function scheduleFromOccurrences(
 
   for (const occ of occurrences) {
     if (isUnderwayTaskOccurrence(occ)) continue
-    if (options.snoozeActive?.(occ.eventId)) continue
+    const snoozeMs = options.snoozeUntil?.(occ.eventId) ?? null
+    const snoozeAhead = typeof snoozeMs === 'number' && Number.isFinite(snoozeMs) && snoozeMs > now.getTime()
+    if (options.snoozeActive?.(occ.eventId) && !snoozeAhead) continue
     const fireKey = reminderFireKey(occ.eventId, occ.originalStartsAt)
     if (fired.has(fireKey)) continue
     if (!isSafeId(occ.eventId)) continue
 
-    const at = effectiveNativeFireAt(occ, options.workWeek)
+    let at = effectiveNativeFireAt(occ, options.workWeek)
+    if (typeof snoozeMs === 'number' && snoozeMs > at.getTime()) at = new Date(snoozeMs)
     if (at.getTime() <= now.getTime()) continue
     if (at.getTime() > horizonEnd.getTime()) continue
 

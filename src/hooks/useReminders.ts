@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { format, formatISO } from 'date-fns'
 import { expandOccurrences } from '../domain/recurrence'
 import {
+  claimReminderOpen,
   collapseSupersededDueReminders,
   partitionMissedReminders,
   reminderFireKey,
   reminderScanRangeWithWorkWeek,
   reminderSnoozeLookback,
+  settleReminderOpen,
   shouldCommitReminderLastScan,
 } from '../domain/reminders'
 import {
@@ -66,6 +68,12 @@ function saveLastScan(now: Date): void {
   localStorage.setItem(LAST_SCAN_KEY, now.toISOString())
 }
 
+function unmarkFired(key: string): void {
+  const fresh = loadFired()
+  fresh.delete(key)
+  saveFired(fresh)
+}
+
 function snoozeUntil(eventId: string): number | null {
   const until = Number(localStorage.getItem(`calendario.snooze.${eventId}`) ?? '0')
   return Number.isFinite(until) && until > 0 ? until : null
@@ -104,6 +112,7 @@ export function useReminders(options: Options = {}): {
   optionsRef.current = options
   const [missedReminders, setMissedReminders] = useState<MissedReminderRow[] | null>(null)
   const missedOpenRef = useRef(false)
+  const recentMovesRef = useRef(new Map<string, number>())
 
   function dismissMissedReminders() {
     setMissedReminders((current) => {
@@ -137,6 +146,13 @@ export function useReminders(options: Options = {}): {
       ) {
         return
       }
+      // El aviso encola el cambio y además lo emite. Sin esto se guarda dos veces
+      // y cada guardado vuelve a escanear.
+      const dedupeKey = `${payload.eventId}|${payload.originalStartsAt}|${payload.newStartsAt}|${payload.preserveTitle ? '1' : '0'}`
+      const seenAt = recentMovesRef.current.get(dedupeKey) ?? 0
+      const nowMs = Date.now()
+      if (nowMs - seenAt < 8000) return
+      recentMovesRef.current.set(dedupeKey, nowMs)
       optionsRef.current.onReschedule?.(payload)
     }
 
@@ -244,8 +260,23 @@ export function useReminders(options: Options = {}): {
       if (acknowledge.length > 0) saveFired(firedRef.current)
 
       let openFailures = 0
+      const claimed: Occurrence[] = []
       for (const occ of notify) {
         const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
+        if (!claimReminderOpen(key, firedRef.current)) continue
+        claimed.push(occ)
+      }
+      if (claimed.length > 0) saveFired(firedRef.current)
+
+      for (const occ of claimed) {
+        const key = reminderFireKey(occ.eventId, occ.originalStartsAt)
+        const snoozeBefore = snoozeUntil(occ.eventId)
+
+        if (snoozeActive(occ.eventId)) {
+          settleReminderOpen(key)
+          unmarkFired(key)
+          continue
+        }
 
         const calendar = calendars.find((c) => c.id === occ.calendarId)
         const timeLabel =
@@ -253,26 +284,35 @@ export function useReminders(options: Options = {}): {
             ? format(occ.startsAt, 'HH:mm')
             : `${format(occ.startsAt, 'HH:mm')} - ${format(occ.endsAt, 'HH:mm')}`
 
-        const opened = await openReminderWindow({
-          title: occ.title,
-          timeLabel,
-          calendarName: calendar?.name ?? 'Calendario',
-          description: occ.description,
-          eventId: occ.eventId,
-          kind: occ.kind,
-          startsAt: formatISO(occ.startsAt),
-          originalStartsAt: formatISO(occ.originalStartsAt),
-          reminderMinutes: occ.reminderMinutes,
-        })
+        let opened = false
+        try {
+          opened = await openReminderWindow({
+            title: occ.title,
+            timeLabel,
+            calendarName: calendar?.name ?? 'Calendario',
+            description: occ.description,
+            eventId: occ.eventId,
+            kind: occ.kind,
+            startsAt: formatISO(occ.startsAt),
+            originalStartsAt: formatISO(occ.originalStartsAt),
+            reminderMinutes: occ.reminderMinutes,
+          })
+        } catch {
+          opened = false
+        } finally {
+          settleReminderOpen(key)
+        }
 
-        // Solo marcar disparado si se mostró aviso (popup/alert/webview).
         if (!opened) {
+          unmarkFired(key)
           openFailures += 1
           continue
         }
-        firedRef.current.add(key)
-        saveFired(firedRef.current)
-        localStorage.removeItem(`calendario.snooze.${occ.eventId}`)
+
+        const snoozeNow = snoozeUntil(occ.eventId)
+        if (snoozeNow === snoozeBefore) {
+          localStorage.removeItem(`calendario.snooze.${occ.eventId}`)
+        }
       }
 
       if (ancient.length > 0 && !missedOpenRef.current) {
@@ -335,6 +375,7 @@ export function useReminders(options: Options = {}): {
         workWeek,
         fired: loadFired(),
         snoozeActive,
+        snoozeUntil,
       }),
     )
   }, [user, loading, events, calendars, exceptions, workWeek])

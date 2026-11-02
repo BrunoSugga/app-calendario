@@ -91,13 +91,13 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - Primera vez sin `lastScan`: solo gracia de 5 min (no vuelca el histórico del calendario).
   - El poll **no corre ni avanza `lastScan` mientras `loading`** del snapshot (evita quemar el catch-up con `events=[]` al abrir). Tampoco avanza si falló abrir un aviso due.
 - **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). No van al modal de antiguos; los demás calendarios usan gracia / catch-up habitual.
-- `fired` en `localStorage` (por dispositivo) solo se marca **después** de abrir el aviso o de acusar el modal de antiguos (si falla el webview/popup no se consume el disparo).
+- `fired` en `localStorage` (por dispositivo) se reserva al decidir abrir el aviso y se confirma si la ventana se mostró. Si el webview/popup no abre, la reserva se suelta para reintentar. El modal de antiguos también marca esas keys al acusarlas.
 - UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`. El calendario solo pasa a primer plano con **Abrir** (editar ese aviso). Aplazar, reagendar, descartar, empezar o cerrar la tarea no lo traen al frente ni cambian el día visible.
 - Aplazamientos:
-  - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas el plazo se cuenta desde el momento en que se pospone, no desde la hora original. Inicio y fin se corren juntos y se conserva el anticipo del aviso, sin prefijo «REAGENDADO». El aviso ya visto de esa repetición se limpia; los de los otros días de la serie quedan.
+  - **≤12 h** (stepper min/h): en eventos, recordatorios y tareas el plazo se cuenta desde el momento en que se pospone, no desde la hora original. Inicio y fin se corren juntos y se conserva el anticipo del aviso, sin prefijo «REAGENDADO». Al confirmar se guarda `calendario.snooze.<id>` hasta el próximo aviso, y recién después de guardar el horario se limpia `fired` de esa repetición. Así el scan no reabre la misma ventana mientras el cambio todavía no está en el calendario. Los avisos de los otros días de la serie quedan.
   - **>12 h** (días): el mismo criterio, desde el momento en que se pospone, y prefija el título con `REAGENDADO · `.
   - Al vencer un aplazamiento viejo guardado en `calendario.snooze.*`, la hora efectiva sigue siendo el fin del snooze.
   - **Reagendar**: usa la fecha y hora elegidas, mueve inicio y fin juntos (`movedScheduleWindow`) y prefija el título con `REAGENDADO · `.
@@ -134,7 +134,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.10** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.11** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

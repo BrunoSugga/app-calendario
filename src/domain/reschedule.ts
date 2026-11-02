@@ -24,6 +24,29 @@ export function postponedStart(actedAt: Date, delayMinutes: number, reminderMinu
   return new Date(actedAt.getTime() + (delay + lead) * 60 * 1000)
 }
 
+/** Instante en que debe volver a sonar, ya descontado el anticipo. */
+export function nextReminderAt(startsAt: Date, reminderMinutes: unknown): Date {
+  if (Number.isNaN(startsAt.getTime())) return new Date(NaN)
+  return new Date(startsAt.getTime() - reminderLeadMinutes(reminderMinutes) * 60 * 1000)
+}
+
+/**
+ * Frena el scan hasta `until`. Si el aviso ya estaba vencido, sin esto
+ * borrar `fired` lo vuelve a abrir en el acto, antes de que el horario nuevo exista.
+ */
+export function armReminderSnooze(eventId: string, until: Date): void {
+  if (!eventId) return
+  try {
+    if (Number.isNaN(until.getTime()) || until.getTime() <= Date.now()) {
+      clearSnoozeForEvent(eventId)
+      return
+    }
+    localStorage.setItem(`calendario.snooze.${eventId}`, String(until.getTime()))
+  } catch {
+    // ignore
+  }
+}
+
 /** Mueve el inicio y conserva la duración, así el fin se corre la misma cantidad. */
 export function movedScheduleWindow(
   startsAt: Date,

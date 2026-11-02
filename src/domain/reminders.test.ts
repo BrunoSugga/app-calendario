@@ -3,11 +3,13 @@ import { addDays, addMinutes } from 'date-fns'
 import type { Calendar, CalendarEvent, EventException, Occurrence } from '../types'
 import { buildRRule, expandOccurrences } from './recurrence'
 import {
+  claimReminderOpen,
   collapseSupersededDueReminders,
   isOccurrenceAncientMissed,
   isOccurrenceDueForReminder,
   partitionMissedReminders,
   reminderFireKey,
+  settleReminderOpen,
   reminderScanRange,
   reminderScanRangeWithWorkWeek,
   reminderSnoozeLookback,
@@ -309,6 +311,20 @@ describe('semana laboral / mute', () => {
     expect(
       selectDueReminders([item], now, new Set(), { workWeek: workMute }).map((o) => o.eventId),
     ).toEqual(['evt-work'])
+  })
+})
+
+describe('claimReminderOpen', () => {
+  it('un segundo scan no vuelve a reservar el mismo aviso', () => {
+    const key = 'evt-bocata:2026-11-02T12:25:00.000Z'
+    const first = new Set<string>()
+    const second = new Set<string>()
+    expect(claimReminderOpen(key, first)).toBe(true)
+    expect(claimReminderOpen(key, second)).toBe(false)
+    expect(first.has(key)).toBe(true)
+    settleReminderOpen(key)
+    expect(claimReminderOpen(key, second)).toBe(true)
+    settleReminderOpen(key)
   })
 })
 

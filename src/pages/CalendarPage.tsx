@@ -17,9 +17,10 @@ import { useAppUpdater } from '../hooks/useAppUpdater'
 import { dayRange, monthGridRange, navigateView, startOfDay, weekRange } from '../domain/dates'
 import { expandOccurrences } from '../domain/recurrence'
 import {
+  armReminderSnooze,
   clearFiredForOccurrence,
-  clearSnoozeForEvent,
   movedScheduleWindow,
+  nextReminderAt,
   withReagendadoPrefix,
 } from '../domain/reschedule'
 import type { RescheduleEventPayload, ReminderPayload } from '../lib/tauri'
@@ -104,23 +105,26 @@ export function CalendarPage() {
       const windowMoved = movedScheduleWindow(previousStart, previousEnd, newStartsAt, kind)
       const isRecurring = Boolean(master.rrule || occ?.isRecurring)
 
-      clearSnoozeForEvent(payload.eventId)
-      clearFiredForOccurrence(payload.eventId, originalStartsAt)
+      armReminderSnooze(payload.eventId, nextReminderAt(newStartsAt, reminderMinutes))
 
-      await saveEvent({
-        id: master.id,
-        calendar_id: master.calendar_id,
-        title: payload.preserveTitle ? titleSource : withReagendadoPrefix(titleSource),
-        description,
-        starts_at: formatISO(windowMoved.startsAt),
-        ends_at: formatISO(windowMoved.endsAt),
-        all_day: allDay,
-        reminder_minutes: reminderMinutes,
-        rrule: master.rrule,
-        kind,
-        editScope: isRecurring ? 'single' : undefined,
-        occurrenceOriginalStartsAt: isRecurring ? formatISO(originalStartsAt) : undefined,
-      })
+      try {
+        await saveEvent({
+          id: master.id,
+          calendar_id: master.calendar_id,
+          title: payload.preserveTitle ? titleSource : withReagendadoPrefix(titleSource),
+          description,
+          starts_at: formatISO(windowMoved.startsAt),
+          ends_at: formatISO(windowMoved.endsAt),
+          all_day: allDay,
+          reminder_minutes: reminderMinutes,
+          rrule: master.rrule,
+          kind,
+          editScope: isRecurring ? 'single' : undefined,
+          occurrenceOriginalStartsAt: isRecurring ? formatISO(originalStartsAt) : undefined,
+        })
+      } finally {
+        clearFiredForOccurrence(payload.eventId, originalStartsAt)
+      }
     },
     [calendars, events, exceptions, saveEvent],
   )
