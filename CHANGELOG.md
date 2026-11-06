@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.12] — 2026-11-06
+
+### Changed
+
+- El organizador lista cada repetición en su día, así se ve todo lo que hay para hacer. Próximos e historial se cargan de a 90 días.
+
 ## [1.2.11] — 2026-11-02
 
 ### Fixed

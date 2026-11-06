@@ -97,42 +97,6 @@ function nearestUpcomingOccurrence(
   )
 }
 
-function lastPastOccurrence(
-  event: CalendarEvent,
-  calendars: Calendar[],
-  exceptions: EventException[],
-  now: Date,
-): Occurrence | null {
-  const rule = eventRule(event)
-  if (!rule) return null
-
-  const candidates = new Map<number, Occurrence>()
-  for (const occurrence of exceptionOccurrences(event, calendars, exceptions)) {
-    if (occurrence.endsAt < now) {
-      candidates.set(occurrence.originalStartsAt.getTime(), occurrence)
-    }
-  }
-
-  let cursor = now
-  const maxAttempts = exceptions.filter((exception) => exception.event_id === event.id).length + 2
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const original = rule.before(cursor, true)
-    if (!original) break
-    const occurrence = occurrenceAtOriginal(event, calendars, exceptions, original)
-    if (occurrence && occurrence.endsAt < now) {
-      candidates.set(occurrence.originalStartsAt.getTime(), occurrence)
-      break
-    }
-    cursor = new Date(original.getTime() - 1)
-  }
-
-  return (
-    [...candidates.values()].sort(
-      (left, right) => right.startsAt.getTime() - left.startsAt.getTime(),
-    )[0] ?? null
-  )
-}
-
 function entryFor(
   occurrence: Occurrence,
   event: CalendarEvent,
@@ -147,16 +111,46 @@ function entryFor(
   }
 }
 
+function occurrenceKey(occurrence: Occurrence): string {
+  return `${occurrence.eventId}:${occurrence.originalStartsAt.getTime()}`
+}
+
 export function buildOrganizerItems(
   events: CalendarEvent[],
   calendars: Calendar[],
   exceptions: EventException[],
   now: Date,
   pastSince: Date,
+  upcomingUntil: Date,
 ): OrganizerItems {
   const calendarMap = new Map(calendars.filter((calendar) => calendar.visible).map((calendar) => [calendar.id, calendar]))
+  const eventMap = new Map(events.map((event) => [event.id, event]))
   const upcoming: OrganizerEntry[] = []
   const past: OrganizerEntry[] = []
+  const seenUpcoming = new Set<string>()
+  const upcomingEventIds = new Set<string>()
+
+  const pushUpcoming = (occurrence: Occurrence) => {
+    const key = occurrenceKey(occurrence)
+    const master = eventMap.get(occurrence.eventId)
+    const calendar = calendarMap.get(occurrence.calendarId)
+    if (!master || !calendar || seenUpcoming.has(key)) return
+    seenUpcoming.add(key)
+    upcomingEventIds.add(master.id)
+    upcoming.push(entryFor(occurrence, master, calendar))
+  }
+
+  for (const occurrence of expandOccurrences(events, calendars, exceptions, pastSince, upcomingUntil)) {
+    if (occurrence.endsAt >= now) {
+      pushUpcoming(occurrence)
+      continue
+    }
+    if (occurrence.endsAt < pastSince) continue
+    const master = eventMap.get(occurrence.eventId)
+    const calendar = calendarMap.get(occurrence.calendarId)
+    if (!master || !calendar) continue
+    past.push(entryFor(occurrence, master, calendar))
+  }
 
   for (const event of events) {
     const calendar = calendarMap.get(event.calendar_id)
@@ -164,25 +158,15 @@ export function buildOrganizerItems(
 
     if (!event.rrule) {
       const occurrence = occurrenceAtOriginal(event, calendars, exceptions, new Date(event.starts_at))
-      if (!occurrence) continue
-      if (occurrence.endsAt >= now) {
-        upcoming.push(entryFor(occurrence, event, calendar))
-      } else if (occurrence.endsAt >= pastSince) {
-        past.push(entryFor(occurrence, event, calendar))
+      if (occurrence && occurrence.startsAt > upcomingUntil && occurrence.endsAt >= now) {
+        pushUpcoming(occurrence)
       }
       continue
     }
 
+    if (upcomingEventIds.has(event.id)) continue
     const next = nearestUpcomingOccurrence(event, calendars, exceptions, now)
-    if (next) {
-      upcoming.push(entryFor(next, event, calendar))
-      continue
-    }
-
-    const previous = lastPastOccurrence(event, calendars, exceptions, now)
-    if (previous && previous.endsAt >= pastSince) {
-      past.push(entryFor(previous, event, calendar))
-    }
+    if (next) pushUpcoming(next)
   }
 
   upcoming.sort((left, right) => left.occurrence.startsAt.getTime() - right.occurrence.startsAt.getTime())

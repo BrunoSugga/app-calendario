@@ -57,6 +57,7 @@ function exception(overrides: Partial<EventException>): EventException {
 
 const now = new Date('2026-08-15T16:00:00.000Z')
 const pastSince = new Date('2026-05-17T16:00:00.000Z')
+const upcomingUntil = new Date('2026-11-13T16:00:00.000Z')
 
 describe('buildOrganizerItems', () => {
   it('ordena eventos futuros e incluye eventos en curso', () => {
@@ -74,12 +75,13 @@ describe('buildOrganizerItems', () => {
       [],
       now,
       pastSince,
+      upcomingUntil,
     )
 
     expect(result.upcoming.map((item) => item.master.id)).toEqual(['current', 'later'])
   })
 
-  it('muestra solo la próxima ocurrencia válida de una serie sin fin', () => {
+  it('lista cada repetición futura y omite el día cancelado', () => {
     const recurring = event({
       starts_at: '2026-08-14T13:00:00.000Z',
       ends_at: '2026-08-14T14:00:00.000Z',
@@ -90,16 +92,62 @@ describe('buildOrganizerItems', () => {
       is_cancelled: true,
     })
 
-    const result = buildOrganizerItems([recurring], [calendar], [cancelled], now, pastSince)
-
-    expect(result.upcoming).toHaveLength(1)
-    expect(result.upcoming[0].occurrence.originalStartsAt.toISOString()).toBe(
-      '2026-08-17T13:00:00.000Z',
+    const result = buildOrganizerItems(
+      [recurring],
+      [calendar],
+      [cancelled],
+      now,
+      pastSince,
+      new Date('2026-08-20T16:00:00.000Z'),
     )
+
+    expect(result.upcoming.map((item) => item.occurrence.originalStartsAt.toISOString())).toEqual([
+      '2026-08-17T13:00:00.000Z',
+      '2026-08-18T13:00:00.000Z',
+      '2026-08-19T13:00:00.000Z',
+      '2026-08-20T13:00:00.000Z',
+    ])
+    expect(result.past.map((item) => item.occurrence.originalStartsAt.toISOString())).toEqual([
+      '2026-08-15T13:00:00.000Z',
+      '2026-08-14T13:00:00.000Z',
+    ])
     expect(result.upcoming[0].recurrenceEndsAt).toBeNull()
   })
 
-  it('prioriza una ocurrencia reprogramada anterior a la próxima canónica', () => {
+  it('lista lunes, miércoles y viernes de un recordatorio semanal', () => {
+    const startsAt = new Date('2026-11-09T12:00:00.000Z')
+    const recurring = event({
+      title: 'Facturar Polakof',
+      kind: 'reminder',
+      reminder_minutes: 0,
+      starts_at: startsAt.toISOString(),
+      ends_at: startsAt.toISOString(),
+      rrule: buildRRule('weekly', startsAt, [0, 2, 4], new Date('2026-11-29T23:59:59.999Z')),
+    })
+
+    const result = buildOrganizerItems(
+      [recurring],
+      [calendar],
+      [],
+      new Date('2026-11-06T19:28:00.000Z'),
+      new Date('2026-08-08T19:28:00.000Z'),
+      new Date('2027-02-04T19:28:00.000Z'),
+    )
+
+    expect(result.upcoming.map((item) => item.occurrence.startsAt.toISOString())).toEqual([
+      '2026-11-09T12:00:00.000Z',
+      '2026-11-11T12:00:00.000Z',
+      '2026-11-13T12:00:00.000Z',
+      '2026-11-16T12:00:00.000Z',
+      '2026-11-18T12:00:00.000Z',
+      '2026-11-20T12:00:00.000Z',
+      '2026-11-23T12:00:00.000Z',
+      '2026-11-25T12:00:00.000Z',
+      '2026-11-27T12:00:00.000Z',
+    ])
+  })
+
+  it('incluye la ocurrencia reprogramada en el día al que se movió', () => {
     const recurring = event({
       starts_at: '2026-08-10T13:00:00.000Z',
       ends_at: '2026-08-10T14:00:00.000Z',
@@ -112,13 +160,28 @@ describe('buildOrganizerItems', () => {
       ends_at: '2026-08-16T14:00:00.000Z',
     })
 
-    const result = buildOrganizerItems([recurring], [calendar], [moved], now, pastSince)
+    const result = buildOrganizerItems(
+      [recurring],
+      [calendar],
+      [moved],
+      now,
+      pastSince,
+      new Date('2026-08-24T16:00:00.000Z'),
+    )
 
     expect(result.upcoming[0].occurrence.title).toBe('Movido')
-    expect(result.upcoming[0].occurrence.startsAt.toISOString()).toBe('2026-08-16T13:00:00.000Z')
+    expect(result.upcoming.map((item) => item.occurrence.startsAt.toISOString())).toEqual([
+      '2026-08-16T13:00:00.000Z',
+      '2026-08-17T13:00:00.000Z',
+      '2026-08-24T13:00:00.000Z',
+    ])
+    expect(result.upcoming[0].occurrence.originalStartsAt.toISOString()).toBe('2026-08-10T13:00:00.000Z')
+    expect(
+      result.upcoming.some((item) => item.occurrence.startsAt.toISOString() === '2026-08-10T13:00:00.000Z'),
+    ).toBe(false)
   })
 
-  it('muestra una serie finalizada una sola vez en anteriores', () => {
+  it('muestra cada día de una serie ya terminada', () => {
     const recurring = event({
       starts_at: '2026-08-10T13:00:00.000Z',
       ends_at: '2026-08-10T14:00:00.000Z',
@@ -130,12 +193,38 @@ describe('buildOrganizerItems', () => {
       ),
     })
 
-    const result = buildOrganizerItems([recurring], [calendar], [], now, pastSince)
+    const result = buildOrganizerItems([recurring], [calendar], [], now, pastSince, upcomingUntil)
 
     expect(result.upcoming).toHaveLength(0)
-    expect(result.past).toHaveLength(1)
-    expect(result.past[0].occurrence.startsAt.toISOString()).toBe('2026-08-12T13:00:00.000Z')
+    expect(result.past.map((item) => item.occurrence.startsAt.toISOString())).toEqual([
+      '2026-08-12T13:00:00.000Z',
+      '2026-08-11T13:00:00.000Z',
+      '2026-08-10T13:00:00.000Z',
+    ])
     expect(result.past[0].recurrenceEndsAt?.toISOString()).toBe('2026-08-12T13:00:00.000Z')
+  })
+
+  it('conserva un evento único y la próxima de una serie que empiezan después del rango', () => {
+    const later = event({
+      id: 'later',
+      starts_at: '2027-03-01T13:00:00.000Z',
+      ends_at: '2027-03-01T14:00:00.000Z',
+    })
+    const series = event({
+      id: 'series',
+      starts_at: '2027-01-04T13:00:00.000Z',
+      ends_at: '2027-01-04T14:00:00.000Z',
+      rrule: buildRRule('weekly', new Date('2027-01-04T13:00:00.000Z'), [0]),
+    })
+    const shortWindow = new Date('2026-09-01T16:00:00.000Z')
+
+    const single = buildOrganizerItems([later], [calendar], [], now, pastSince, shortWindow)
+    const recurring = buildOrganizerItems([series], [calendar], [], now, pastSince, shortWindow)
+
+    expect(single.upcoming).toHaveLength(1)
+    expect(single.upcoming[0].occurrence.startsAt.toISOString()).toBe('2027-03-01T13:00:00.000Z')
+    expect(recurring.upcoming).toHaveLength(1)
+    expect(recurring.upcoming[0].occurrence.startsAt.toISOString()).toBe('2027-01-04T13:00:00.000Z')
   })
 
   it('respeta el rango anterior y la visibilidad del calendario', () => {
@@ -143,9 +232,10 @@ describe('buildOrganizerItems', () => {
       starts_at: '2026-01-01T13:00:00.000Z',
       ends_at: '2026-01-01T14:00:00.000Z',
     })
-    expect(buildOrganizerItems([old], [calendar], [], now, pastSince).past).toHaveLength(0)
+    expect(buildOrganizerItems([old], [calendar], [], now, pastSince, upcomingUntil).past).toHaveLength(0)
     expect(
-      buildOrganizerItems([event()], [{ ...calendar, visible: false }], [], now, pastSince).upcoming,
+      buildOrganizerItems([event()], [{ ...calendar, visible: false }], [], now, pastSince, upcomingUntil)
+        .upcoming,
     ).toHaveLength(0)
   })
 })

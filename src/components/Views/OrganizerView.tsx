@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { subDays } from 'date-fns'
+import { addDays, subDays } from 'date-fns'
 import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import { buildOrganizerItems, type OrganizerEntry } from '../../domain/organizer'
 import type {
@@ -127,6 +127,7 @@ export function OrganizerView({
   onDeleteOccurrence,
 }: Props) {
   const [referenceTime] = useState(() => new Date())
+  const [upcomingDays, setUpcomingDays] = useState(90)
   const [pastDays, setPastDays] = useState(90)
   const [pastOpen, setPastOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -143,8 +144,9 @@ export function OrganizerView({
         exceptions,
         referenceTime,
         subDays(referenceTime, pastDays),
+        addDays(referenceTime, upcomingDays),
       ),
-    [events, calendars, exceptions, referenceTime, pastDays],
+    [events, calendars, exceptions, referenceTime, pastDays, upcomingDays],
   )
 
   const filterEntry = (entry: OrganizerEntry) => {
@@ -184,7 +186,7 @@ export function OrganizerView({
       <header className="organizer-header">
         <div>
           <h2 id="organizer-title">Organizador de eventos</h2>
-          <p>Próximos eventos y una sola aparición por cada serie periódica.</p>
+          <p>Cada día muestra lo que hay para hacer, con todas las repeticiones.</p>
         </div>
         <button
           type="button"
@@ -282,6 +284,13 @@ export function OrganizerView({
             </div>
           ))
         )}
+        <button
+          type="button"
+          className="btn organizer-load-more"
+          onClick={() => setUpcomingDays((days) => days + 90)}
+        >
+          Cargar 90 días más
+        </button>
       </section>
 
       <section className="organizer-section organizer-past" aria-labelledby="past-title">

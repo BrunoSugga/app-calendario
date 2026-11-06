@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { buildRRule } from '../../domain/recurrence'
 import type { Calendar, CalendarEvent } from '../../types'
 import { OrganizerView } from './OrganizerView'
 
@@ -89,5 +90,36 @@ describe('OrganizerView', () => {
     await user.selectOptions(screen.getByLabelText('Estado de tarea'), 'in_progress')
     expect(screen.getByText('Preparar informe')).toBeInTheDocument()
     expect(screen.queryByText('Reunión futura')).not.toBeInTheDocument()
+  })
+
+  it('repite un recordatorio en cada día de la serie', () => {
+    const start = new Date()
+    start.setDate(start.getDate() + 1)
+    start.setHours(9, 0, 0, 0)
+    const until = new Date(start)
+    until.setDate(until.getDate() + 2)
+    until.setHours(23, 59, 59, 999)
+
+    render(
+      <OrganizerView
+        events={[
+          event({
+            title: 'Facturar Polakof',
+            kind: 'reminder',
+            reminder_minutes: 0,
+            starts_at: start.toISOString(),
+            ends_at: start.toISOString(),
+            rrule: buildRRule('daily', start, [], until),
+          }),
+        ]}
+        calendars={[calendar]}
+        exceptions={[]}
+        onOpenOccurrence={vi.fn()}
+        onDeleteOccurrence={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByText('Facturar Polakof')).toHaveLength(3)
+    expect(screen.getByText('Próximos (3)')).toBeInTheDocument()
   })
 })
