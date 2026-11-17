@@ -1,6 +1,11 @@
 # Pendientes operativos
 
-Única fuente de tareas abiertas del proyecto. Última revisión: **2026-08-15**.
+Única fuente de tareas abiertas del proyecto. Última revisión: **2026-11-17**.
+
+## Seguimiento de v1.2.13
+
+- [ ] Smoke con sesión en https://calendario.bmatrix.org: login, calendario, Organizador, crear/editar/eliminar y logout.
+- [ ] En una PC no crítica, confirmar que la app de escritorio anterior detecta v1.2.13 (un solo diálogo, actualización y relanzamiento) y que F5 en la ventana de un recordatorio sigue mostrando el aviso.
 
 ## P0 — seguridad / producción
 
