@@ -92,7 +92,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - El poll **no corre ni avanza `lastScan` mientras `loading`** del snapshot (evita quemar el catch-up con `events=[]` al abrir). Tampoco avanza si falló abrir un aviso due.
 - **Semana laboral:** si “No molestar fuera del horario laboral” está activo, los avisos del calendario laboral se retienen fuera de jornada y se disparan al reentrar (lookback desde el fin de la jornada previa vía `previousWorkPeriodEnd` / `reminderScanRangeWithWorkWeek`). No van al modal de antiguos; los demás calendarios usan gracia / catch-up habitual.
 - `fired` en `localStorage` (por dispositivo) se reserva al decidir abrir el aviso y se confirma si la ventana se mostró. Si el webview/popup no abre, la reserva se suelta para reintentar. El modal de antiguos también marca esas keys al acusarlas.
-- UI: `ReminderWindow` en ruta `?reminder=1&t=<token>` (payload one-shot en `localStorage`).
+- UI: `ReminderWindow` en ruta `?reminder=1&t=<token>`. El payload sale de `localStorage` una sola vez; esa ventana lo conserva en `sessionStorage` hasta cerrar o actuar, así un F5 no lo deja inválido. Otra ventana con el mismo enlace no puede reabrirlo, y a los 5 minutos vence.
 - **Desktop (Tauri):** `WebviewWindow` always-on-top + capabilities `reminder-*`.
 - **Web (navegador):** misma UI en `window.open` (popup). Si el navegador bloquea popups → `alert` (+ Notification si hay permiso).
 - Bridge popup ↔ ventana principal: cola `localStorage` (`calendario.pending.*`) + eventos; en Tauri también `emitTo('main', …)`. El calendario solo pasa a primer plano con **Abrir** (editar ese aviso). Aplazar, reagendar, descartar, empezar o cerrar la tarea no lo traen al frente ni cambian el día visible.
@@ -111,7 +111,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
   - **Sí:** `completeTask` (igual que terminar desde el modal).
   - **No:** la hora de fin se corre una hora (`extendedTaskEnd`). Si esa hora ya pasó porque se respondió tarde, la próxima pregunta queda a una hora de ahora. En una serie solo se mueve esa ocurrencia.
   - Se pregunta una vez por cada hora de fin. Si el popup no puede abrirse (web con bloqueo o Android), la misma pregunta queda en un cuadro dentro de la app.
-  - Ventana desktop: misma capability `reminder-*`, ruta `?task-end=1&t=<token>`.
+  - Ventana desktop: misma capability `reminder-*`, ruta `?task-end=1&t=<token>`. El mismo criterio que el recordatorio: F5 conserva el aviso en esa ventana y no lo marca como cerrado. Cerrar la ventana sí avisa a la principal.
 - Si un aviso “no salió”: limpiar `calendario.reminders.fired` / `calendario.reminders.lastScan` / `calendario.snooze.*` en DevTools o esperar; permitir popups en el dominio.
 
 ## UI principal
@@ -134,7 +134,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.12** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.13** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

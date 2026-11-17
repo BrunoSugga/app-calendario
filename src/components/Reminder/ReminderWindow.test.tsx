@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isOccurrenceDueForReminder, reminderFireKey } from '../../domain/reminders'
+import { storeReminderPayload } from '../../lib/tauri'
 import { ReminderWindow } from './ReminderWindow'
 
 describe('ReminderWindow aplazar', () => {
@@ -74,5 +75,52 @@ describe('ReminderWindow aplazar', () => {
         { snoozeActive: () => until > Date.now() },
       ),
     ).toBe(false)
+  })
+})
+
+describe('ReminderWindow al recargar', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+    window.history.replaceState({}, '', '/')
+    vi.stubGlobal(
+      'Audio',
+      class {
+        volume = 1
+        play(): Promise<void> {
+          return Promise.resolve()
+        }
+      },
+    )
+    vi.spyOn(window, 'close').mockImplementation(() => {})
+  })
+
+  it('muestra el mismo aviso después de un F5 y lo suelta al descartar', async () => {
+    const user = userEvent.setup()
+    const token = storeReminderPayload({
+      title: 'Bocata y tres hermanos',
+      timeLabel: '09:25',
+      calendarName: 'Personal',
+      description: '',
+      eventId: 'evt-bocata',
+      kind: 'reminder',
+      startsAt: '2026-11-02T12:25:00.000Z',
+      originalStartsAt: '2026-11-02T12:25:00.000Z',
+      reminderMinutes: 0,
+    })
+    window.history.replaceState({}, '', `/?reminder=1&t=${token}`)
+
+    const first = render(<ReminderWindow />)
+    expect(screen.getByRole('heading', { name: 'Bocata y tres hermanos' })).toBeInTheDocument()
+    expect(screen.queryByText('Recordatorio inválido o expirado.')).not.toBeInTheDocument()
+    first.unmount()
+
+    const reloaded = render(<ReminderWindow />)
+    expect(screen.getByRole('heading', { name: 'Bocata y tres hermanos' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Descartar' }))
+    reloaded.unmount()
+    render(<ReminderWindow />)
+    expect(screen.getByText('Recordatorio inválido o expirado.')).toBeInTheDocument()
   })
 })

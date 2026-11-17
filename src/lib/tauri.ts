@@ -13,7 +13,11 @@ import { normalizeEventKind } from '../types'
 export { isTauri } from './platform'
 
 const REMINDER_PREFIX = 'calendario.reminder.payload.'
+const REMINDER_SESSION_PREFIX = 'calendario.reminder.session.'
 const TASK_END_PREFIX = 'calendario.taskEnd.payload.'
+const TASK_END_SESSION_PREFIX = 'calendario.taskEnd.session.'
+/** La copia de esta ventana vive más que el token de un solo uso, para aguantar un F5 tardío. */
+const WINDOW_PAYLOAD_TTL_MS = 12 * 60 * 60 * 1000
 const OPEN_EVENT_KEY = 'calendario.pending.open-event'
 const START_TASK_KEY = 'calendario.pending.start-task'
 const RESCHEDULE_KEY = 'calendario.pending.reschedule'
@@ -98,23 +102,45 @@ export function storeReminderPayload(payload: Omit<ReminderPayload, 'exp'>): str
   return token
 }
 
+function readReminderRecord(raw: string | null): ReminderPayload | null {
+  if (!raw) return null
+  let data: ReminderPayload
+  try {
+    data = JSON.parse(raw) as ReminderPayload
+  } catch {
+    return null
+  }
+  if (!data || typeof data !== 'object') return null
+  if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
+  const clean = sanitizeReminderFields(data)
+  if (!clean) return null
+  return { ...clean, exp: data.exp }
+}
+
 export function consumeReminderPayload(token: string): ReminderPayload | null {
   if (!isSafeReminderToken(token)) return null
   const key = `${REMINDER_PREFIX}${token}`
   try {
     const raw = localStorage.getItem(key)
     localStorage.removeItem(key)
-    if (!raw) return null
-    const data = JSON.parse(raw) as ReminderPayload
-    if (!data || typeof data !== 'object') return null
-    if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
-    const clean = sanitizeReminderFields(data)
-    if (!clean) return null
-    return { ...clean, exp: data.exp }
+    return readReminderRecord(raw)
   } catch {
     localStorage.removeItem(key)
     return null
   }
+}
+
+/**
+ * Lee el aviso para la ventana que ya lo abrió.
+ * localStorage sigue siendo de un solo uso (otra ventana no puede reabrir el enlace).
+ * sessionStorage sobrevive a F5 en esta misma ventana hasta que se cierra o se actúa.
+ */
+export function loadReminderWindowPayload(token: string): ReminderPayload | null {
+  return rememberForThisWindow(token, REMINDER_SESSION_PREFIX, readReminderRecord, consumeReminderPayload)
+}
+
+export function releaseReminderWindowPayload(token: string): void {
+  releaseWindowPayload(token, REMINDER_SESSION_PREFIX, REMINDER_PREFIX)
 }
 
 function sanitizeTaskEndFields(payload: {
@@ -145,22 +171,90 @@ export function storeTaskEndPayload(payload: Omit<TaskEndPromptPayload, 'exp'>):
   return token
 }
 
+function readTaskEndRecord(raw: string | null): TaskEndPromptPayload | null {
+  if (!raw) return null
+  let data: TaskEndPromptPayload
+  try {
+    data = JSON.parse(raw) as TaskEndPromptPayload
+  } catch {
+    return null
+  }
+  if (!data || typeof data !== 'object') return null
+  if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
+  const clean = sanitizeTaskEndFields(data)
+  if (!clean) return null
+  return { ...clean, exp: data.exp }
+}
+
 export function consumeTaskEndPayload(token: string): TaskEndPromptPayload | null {
   if (!isSafeReminderToken(token)) return null
   const key = `${TASK_END_PREFIX}${token}`
   try {
     const raw = localStorage.getItem(key)
     localStorage.removeItem(key)
-    if (!raw) return null
-    const data = JSON.parse(raw) as TaskEndPromptPayload
-    if (!data || typeof data !== 'object') return null
-    if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
-    const clean = sanitizeTaskEndFields(data)
-    if (!clean) return null
-    return { ...clean, exp: data.exp }
+    return readTaskEndRecord(raw)
   } catch {
     localStorage.removeItem(key)
     return null
+  }
+}
+
+export function loadTaskEndWindowPayload(token: string): TaskEndPromptPayload | null {
+  return rememberForThisWindow(token, TASK_END_SESSION_PREFIX, readTaskEndRecord, consumeTaskEndPayload)
+}
+
+export function releaseTaskEndWindowPayload(token: string): void {
+  releaseWindowPayload(token, TASK_END_SESSION_PREFIX, TASK_END_PREFIX)
+}
+
+function rememberForThisWindow<T extends { exp: number }>(
+  token: string,
+  sessionPrefix: string,
+  read: (raw: string | null) => T | null,
+  consume: (token: string) => T | null,
+): T | null {
+  if (!isSafeReminderToken(token)) return null
+  const sessionKey = `${sessionPrefix}${token}`
+  try {
+    const cachedRaw = sessionStorage.getItem(sessionKey)
+    if (cachedRaw) {
+      const cached = read(cachedRaw)
+      if (cached) {
+        const kept = { ...cached, exp: Date.now() + WINDOW_PAYLOAD_TTL_MS }
+        try {
+          sessionStorage.setItem(sessionKey, JSON.stringify(kept))
+        } catch {
+          // la lectura igual puede mostrar el aviso
+        }
+        return kept
+      }
+      sessionStorage.removeItem(sessionKey)
+    }
+  } catch {
+    // sessionStorage bloqueado: la primera apertura sigue por localStorage
+  }
+  const fresh = consume(token)
+  if (!fresh) return null
+  const kept = { ...fresh, exp: Date.now() + WINDOW_PAYLOAD_TTL_MS }
+  try {
+    sessionStorage.setItem(sessionKey, JSON.stringify(kept))
+  } catch {
+    // sin sessionStorage, F5 no puede recuperar el aviso
+  }
+  return kept
+}
+
+function releaseWindowPayload(token: string, sessionPrefix: string, localPrefix: string): void {
+  if (!isSafeReminderToken(token)) return
+  try {
+    sessionStorage.removeItem(`${sessionPrefix}${token}`)
+  } catch {
+    // ignore
+  }
+  try {
+    localStorage.removeItem(`${localPrefix}${token}`)
+  } catch {
+    // ignore
   }
 }
 

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { consumeQueuedTaskEndClosed, storeTaskEndPayload } from '../../lib/tauri'
 import { TaskEndPromptWindow } from './TaskEndPromptWindow'
 
 describe('TaskEndPromptWindow', () => {
@@ -27,5 +28,43 @@ describe('TaskEndPromptWindow', () => {
     render(<TaskEndPromptWindow initial={initial} onYes={onYes} onNo={vi.fn()} />)
     await user.click(screen.getByRole('button', { name: 'Sí, ya terminó' }))
     expect(onYes).toHaveBeenCalledWith('task-1')
+  })
+})
+
+describe('TaskEndPromptWindow al recargar', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+    window.history.replaceState({}, '', '/')
+  })
+
+  function openStored() {
+    const token = storeTaskEndPayload({
+      eventId: 'task-1',
+      title: 'Informe',
+      endsAt: '2026-09-29T13:00:00.000Z',
+    })
+    window.history.replaceState({}, '', `/?task-end=1&t=${token}`)
+    return render(<TaskEndPromptWindow />)
+  }
+
+  it('F5 no da por cerrado el aviso y lo vuelve a mostrar', () => {
+    const view = openStored()
+    expect(screen.getByRole('heading', { name: 'Informe' })).toBeInTheDocument()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5' }))
+    window.dispatchEvent(new Event('pagehide'))
+    expect(consumeQueuedTaskEndClosed()).toBeNull()
+
+    view.unmount()
+    render(<TaskEndPromptWindow />)
+    expect(screen.getByRole('heading', { name: 'Informe' })).toBeInTheDocument()
+    expect(screen.queryByText('El aviso expiró o no es válido.')).not.toBeInTheDocument()
+  })
+
+  it('cerrar la ventana avisa a la principal', () => {
+    openStored()
+    window.dispatchEvent(new Event('pagehide'))
+    expect(consumeQueuedTaskEndClosed()).toBe('task-1')
   })
 })

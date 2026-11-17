@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import {
-  consumeTaskEndPayload,
   isTauri,
+  loadTaskEndWindowPayload,
   notifyMainCompleteTask,
   notifyMainExtendTaskEnd,
   queueTaskEndClosed,
+  releaseTaskEndWindowPayload,
   type TaskEndPromptPayload,
 } from '../../lib/tauri'
 import { isCapacitor } from '../../lib/platform'
-import { isSafeId, isSafeReminderToken } from '../../lib/security'
+import { isSafeId } from '../../lib/security'
+
+function promptToken(tokenOverride?: string): string {
+  return tokenOverride ?? new URLSearchParams(window.location.search).get('t') ?? ''
+}
 
 function loadPrompt(tokenOverride?: string): Omit<TaskEndPromptPayload, 'exp'> | null {
-  const token = tokenOverride ?? new URLSearchParams(window.location.search).get('t') ?? ''
-  if (!isSafeReminderToken(token)) return null
-  const data = consumeTaskEndPayload(token)
+  const data = loadTaskEndWindowPayload(promptToken(tokenOverride))
   if (!data) return null
   return { eventId: data.eventId, title: data.title, endsAt: data.endsAt }
+}
+
+function isRefreshKey(ev: KeyboardEvent): boolean {
+  if (ev.key === 'F5') return true
+  return ev.key.toLowerCase() === 'r' && (ev.ctrlKey || ev.metaKey) && !ev.altKey
 }
 
 function playPromptSound(): void {
@@ -46,6 +54,7 @@ export function TaskEndPromptWindow({
   onNo?: (eventId: string) => void
   onDismiss?: () => void
 } = {}) {
+  const boundToken = initial ? '' : promptToken(token)
   const data = useMemo(() => initial ?? loadPrompt(token), [initial, token])
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -57,14 +66,28 @@ export function TaskEndPromptWindow({
 
   useEffect(() => {
     if (!data || onYes || onNo) return
-    function onLeave() {
-      if (!answeredRef.current && data) queueTaskEndClosed(data.eventId)
+    let refreshRequested = false
+    function onKey(ev: KeyboardEvent) {
+      if (isRefreshKey(ev)) refreshRequested = true
     }
+    function onLeave() {
+      if (refreshRequested || answeredRef.current || !data) return
+      queueTaskEndClosed(data.eventId)
+    }
+    window.addEventListener('keydown', onKey)
     window.addEventListener('pagehide', onLeave)
-    return () => window.removeEventListener('pagehide', onLeave)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pagehide', onLeave)
+    }
   }, [data, onYes, onNo])
 
+  function releasePayload() {
+    if (boundToken) releaseTaskEndWindowPayload(boundToken)
+  }
+
   async function closeWindow() {
+    releasePayload()
     if (onDismiss) {
       onDismiss()
       return
@@ -92,6 +115,7 @@ export function TaskEndPromptWindow({
         else await notifyMainExtendTaskEnd(data.eventId)
         setMessage('Hora de fin extendida una hora')
       }
+      releasePayload()
       window.setTimeout(() => {
         void closeWindow()
       }, 500)

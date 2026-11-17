@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.13] — 2026-11-17
+
+### Fixed
+
+- Recargar con F5 la ventana de un recordatorio, o la de fin de tarea, ya no la deja inválida o vencida. El aviso sigue en esa misma ventana hasta que se cierra o se usa.
+
 ## [1.2.12] — 2026-11-06
 
 ### Changed

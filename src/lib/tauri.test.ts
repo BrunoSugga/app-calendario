@@ -8,6 +8,10 @@ import {
   consumeQueuedTaskEndClosed,
   consumeReminderPayload,
   consumeTaskEndPayload,
+  loadReminderWindowPayload,
+  loadTaskEndWindowPayload,
+  releaseReminderWindowPayload,
+  releaseTaskEndWindowPayload,
   queueCompleteTask,
   queueExtendTaskEnd,
   queueOpenEvent,
@@ -21,6 +25,7 @@ import {
 describe('reminder payload / bridges', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   it('guarda y consume payload con kind, startsAt y originalStartsAt', () => {
@@ -42,6 +47,78 @@ describe('reminder payload / bridges', () => {
     expect(data?.originalStartsAt).toBe('2026-08-05T10:00:00.000Z')
     expect(data?.reminderMinutes).toBe(15)
     expect(consumeReminderPayload(token)).toBeNull()
+  })
+
+  it('sobrevive a una recarga de la misma ventana y no se reabre en otra', () => {
+    const token = storeReminderPayload({
+      title: 'Bocata',
+      timeLabel: '09:25',
+      calendarName: 'Personal',
+      description: '',
+      eventId: 'evt-1',
+      kind: 'reminder',
+      startsAt: '2026-08-05T12:25:00.000Z',
+      originalStartsAt: '2026-08-05T12:25:00.000Z',
+      reminderMinutes: 0,
+    })
+
+    expect(loadReminderWindowPayload(token)?.title).toBe('Bocata')
+    expect(localStorage.getItem(`calendario.reminder.payload.${token}`)).toBeNull()
+    expect(loadReminderWindowPayload(token)?.title).toBe('Bocata')
+
+    sessionStorage.clear()
+    expect(loadReminderWindowPayload(token)).toBeNull()
+  })
+
+  it('rechaza token hostil, aviso vencido y session manipulada', () => {
+    expect(loadReminderWindowPayload('../etc')).toBeNull()
+    expect(loadReminderWindowPayload('<script>')).toBeNull()
+
+    const expired = storeReminderPayload({
+      title: 'Viejo',
+      timeLabel: '09:25',
+      calendarName: 'Personal',
+      description: '',
+      eventId: 'evt-1',
+      kind: 'reminder',
+      startsAt: '2026-08-05T12:25:00.000Z',
+      originalStartsAt: '2026-08-05T12:25:00.000Z',
+    })
+    const stored = JSON.parse(localStorage.getItem(`calendario.reminder.payload.${expired}`) ?? 'null') as {
+      exp: number
+    }
+    stored.exp = Date.now() - 1000
+    localStorage.setItem(`calendario.reminder.payload.${expired}`, JSON.stringify(stored))
+    expect(loadReminderWindowPayload(expired)).toBeNull()
+
+    const token = storeReminderPayload({
+      title: 'Bocata',
+      timeLabel: '09:25',
+      calendarName: 'Personal',
+      description: '',
+      eventId: 'evt-1',
+      kind: 'reminder',
+      startsAt: '2026-08-05T12:25:00.000Z',
+      originalStartsAt: '2026-08-05T12:25:00.000Z',
+    })
+    expect(loadReminderWindowPayload(token)?.eventId).toBe('evt-1')
+    sessionStorage.setItem(
+      `calendario.reminder.session.${token}`,
+      JSON.stringify({
+        eventId: '<script>',
+        title: 'x',
+        timeLabel: '09:25',
+        calendarName: 'Personal',
+        description: '',
+        kind: 'reminder',
+        startsAt: '2026-08-05T12:25:00.000Z',
+        originalStartsAt: '2026-08-05T12:25:00.000Z',
+        reminderMinutes: 0,
+        exp: Date.now() + 60_000,
+      }),
+    )
+    expect(loadReminderWindowPayload(token)).toBeNull()
+    releaseReminderWindowPayload('<script>')
   })
 
   it('usa startsAt como originalStartsAt si falta', () => {
@@ -107,6 +184,16 @@ describe('reminder payload / bridges', () => {
     expect(data?.title).toBe('Informe')
     expect(data?.endsAt).toBe('2026-09-29T13:00:00.000Z')
     expect(consumeTaskEndPayload(token)).toBeNull()
+
+    const again = storeTaskEndPayload({
+      eventId: 'task-1',
+      title: 'Informe',
+      endsAt: '2026-09-29T13:00:00.000Z',
+    })
+    expect(loadTaskEndWindowPayload(again)?.title).toBe('Informe')
+    expect(loadTaskEndWindowPayload(again)?.title).toBe('Informe')
+    releaseTaskEndWindowPayload(again)
+    expect(loadTaskEndWindowPayload(again)).toBeNull()
 
     expect(() =>
       storeTaskEndPayload({

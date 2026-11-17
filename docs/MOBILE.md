@@ -58,7 +58,7 @@ npm run android:apk
 ```
 
 - Confirmar `versionCode` y `versionName`.
-- `versionCode` usa `major*10000 + minor*100 + patch` (v1.2.12 → 10212); `npm run check:versions` lo valida.
+- `versionCode` usa `major*10000 + minor*100 + patch` (v1.2.13 → 10213); `npm run check:versions` lo valida.
 - Verificar firma esperada.
 - Revisar `strings` sin secretos/tokens administrativos.
 - Instalar como actualización sobre la versión anterior.

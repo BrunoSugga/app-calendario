@@ -3,15 +3,16 @@ import { formatISO } from 'date-fns'
 import { kindLabel } from '../../domain/eventKind'
 import { armReminderSnooze, nextReminderAt, postponedStart } from '../../domain/reschedule'
 import {
-  consumeReminderPayload,
   isTauri,
+  loadReminderWindowPayload,
   notifyMainOpenEvent,
   notifyMainRescheduleEvent,
   notifyMainStartTask,
+  releaseReminderWindowPayload,
   type ReminderPayload,
 } from '../../lib/tauri'
 import { isCapacitor } from '../../lib/platform'
-import { isSafeId, isSafeReminderToken } from '../../lib/security'
+import { isSafeId } from '../../lib/security'
 
 const SHORT_OPTIONS = [
   { label: '5 min', minutes: 5 },
@@ -37,10 +38,12 @@ const LONG_OPTIONS = [
 
 type DelayOption = { label: string; minutes: number }
 
+function reminderToken(tokenOverride?: string): string {
+  return tokenOverride ?? new URLSearchParams(window.location.search).get('t') ?? ''
+}
+
 function loadReminder(tokenOverride?: string): ReminderPayload | null {
-  const token = tokenOverride ?? new URLSearchParams(window.location.search).get('t') ?? ''
-  if (!isSafeReminderToken(token)) return null
-  return consumeReminderPayload(token)
+  return loadReminderWindowPayload(reminderToken(tokenOverride))
 }
 
 function playReminderSound(): void {
@@ -192,6 +195,7 @@ export function ReminderWindow({
   initial?: Omit<ReminderPayload, 'exp'>
   onDismiss?: () => void
 } = {}) {
+  const boundToken = initial ? '' : reminderToken(token)
   const data = useMemo(() => {
     if (initial) {
       return { ...initial, exp: Date.now() + 5 * 60 * 1000 }
@@ -211,7 +215,12 @@ export function ReminderWindow({
     if (data) playReminderSound()
   }, [data])
 
+  function releasePayload() {
+    if (boundToken) releaseReminderWindowPayload(boundToken)
+  }
+
   async function closeWindow() {
+    releasePayload()
     if (onDismiss) {
       onDismiss()
       return
@@ -247,6 +256,7 @@ export function ReminderWindow({
       newStartsAt: formatISO(newStartsAt),
       preserveTitle: options?.preserveTitle === true,
     })
+    releasePayload()
     setMessage(options?.preserveTitle ? `Pospuesto ${label}` : `Reagendado: ${label}`)
     window.setTimeout(() => {
       void closeWindow()
@@ -279,6 +289,7 @@ export function ReminderWindow({
   async function openInCalendar() {
     if (!data) return
     await notifyMainOpenEvent({ eventId: data.eventId, startsAt: data.startsAt })
+    releasePayload()
     setMessage('Abriendo calendario…')
     window.setTimeout(() => {
       void closeWindow()
@@ -288,6 +299,7 @@ export function ReminderWindow({
   async function startTask() {
     if (!data) return
     await notifyMainStartTask(data.eventId)
+    releasePayload()
     setMessage('Tarea iniciada')
     window.setTimeout(() => {
       void closeWindow()
