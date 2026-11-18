@@ -1,5 +1,6 @@
 /** Un instante (inicio = fin) sigue ocupando 1 ms para poder solaparse con otro igual. */
 const POINT_MS = 1
+const HOUR_MS = 60 * 60 * 1000
 const GUTTER_PX = 4
 const GAP_PX = 3
 
@@ -14,6 +15,14 @@ export type TimedLayout<T> = {
   columns: number
 }
 
+export type TimedLayoutOptions = {
+  /**
+   * Huella mínima del bloque pintado, en ms.
+   * Sin valor (o no positivo), cada instante ocupa 1 ms y el fin real no se estira.
+   */
+  minSpanMs?: number
+}
+
 type Span<T> = {
   item: T
   index: number
@@ -21,23 +30,42 @@ type Span<T> = {
   end: number
 }
 
-function spanOf<T extends TimedSpan>(item: T, index: number): Span<T> {
+/** Ms que ocupa el alto mínimo de un bloque a la escala actual de la grilla. */
+export function minVisualSpanMs(minBlockPx: number, hourHeightPx: number): number {
+  if (!Number.isFinite(minBlockPx) || !Number.isFinite(hourHeightPx)) return POINT_MS
+  if (minBlockPx <= 0 || hourHeightPx <= 0) return POINT_MS
+  return (minBlockPx / hourHeightPx) * HOUR_MS
+}
+
+function floorSpanMs(minSpanMs: number | undefined): number {
+  if (minSpanMs == null || !Number.isFinite(minSpanMs) || minSpanMs <= POINT_MS) return POINT_MS
+  return minSpanMs
+}
+
+function spanOf<T extends TimedSpan>(item: T, index: number, minSpanMs: number): Span<T> {
   const start = item.startsAt.getTime()
   const rawEnd = item.endsAt.getTime()
   if (!Number.isFinite(start)) {
-    return { item, index, start: 0, end: POINT_MS }
+    return { item, index, start: 0, end: minSpanMs }
   }
   const end = Number.isFinite(rawEnd) ? rawEnd : start
-  return { item, index, start, end: Math.max(end, start + POINT_MS) }
+  return { item, index, start, end: Math.max(end, start + minSpanMs) }
 }
 
 /**
  * Reparte en columnas los bloques que comparten horario.
  * Dos recordatorios de duración cero a la misma hora quedan en columnas distintas:
  * un intervalo [t, t] no solapa a otro con la comparación estricta `start < end`.
+ * Con `minSpanMs`, el fin de layout es el máximo entre el fin real y esa huella:
+ * así dos avisos cercanos que se pintarían uno encima del otro pasan a columnas vecinas.
+ * Un bloque ya más largo que la huella no se estira.
  */
-export function layoutTimedEvents<T extends TimedSpan>(items: T[]): TimedLayout<T>[] {
-  const spans = items.map((item, index) => spanOf(item, index))
+export function layoutTimedEvents<T extends TimedSpan>(
+  items: T[],
+  options?: TimedLayoutOptions,
+): TimedLayout<T>[] {
+  const minSpanMs = floorSpanMs(options?.minSpanMs)
+  const spans = items.map((item, index) => spanOf(item, index, minSpanMs))
   const ordered = [...spans].sort(
     (left, right) => left.start - right.start || right.end - left.end || left.index - right.index,
   )

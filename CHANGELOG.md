@@ -4,6 +4,12 @@ Cambios visibles y operativos por versión. Formato basado en Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.2.14] — 2026-11-18
+
+### Fixed
+
+- En la vista de día y en la semana, los eventos, recordatorios y tareas que se dibujarían uno encima del otro quedan en columnas distintas. El reparto usa el alto que se ve en pantalla, no solo la hora guardada.
+
 ## [1.2.13] — 2026-11-17
 
 ### Fixed

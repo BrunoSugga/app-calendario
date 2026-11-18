@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { eachDay, formatShortWeekday, formatTime, isSameDay, weekRange } from '../../domain/dates'
-import { eventBlockBox, layoutTimedEvents } from '../../domain/eventLayout'
+import { eventBlockBox, layoutTimedEvents, minVisualSpanMs } from '../../domain/eventLayout'
 import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const HOUR_PX = 48
+const MIN_BLOCK_PX = 20
 
 type Props = {
   date: Date
@@ -22,8 +23,14 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
   const days = eachDay(start, end)
 
   const byDay = useMemo(() => {
-    return days.map((day) => layoutTimedEvents(occurrences.filter((o) => isSameDay(o.startsAt, day))))
-  }, [days, occurrences])
+    const minSpanMs = minVisualSpanMs(MIN_BLOCK_PX, hourHeight)
+    return days.map((day) =>
+      layoutTimedEvents(
+        occurrences.filter((o) => isSameDay(o.startsAt, day)),
+        { minSpanMs },
+      ),
+    )
+  }, [days, occurrences, hourHeight])
 
   return (
     <div className="time-grid week-view">
@@ -66,10 +73,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
               const startMin = occ.startsAt.getHours() * 60 + occ.startsAt.getMinutes()
               const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
               const top = (startMin / 60) * hourHeight
-              const height = Math.max(
-                ((endMin - startMin) / 60) * hourHeight,
-                occ.kind === 'reminder' ? 18 : 20,
-              )
+              const height = Math.max(((endMin - startMin) / 60) * hourHeight, MIN_BLOCK_PX)
               const timeLabel = formatTime(occ.startsAt)
               const status =
                 occ.kind === 'task' ? ` · ${taskStatusLabel(occ.taskStatus)}` : ''
@@ -81,6 +85,7 @@ export function WeekView({ date, occurrences, zoom, onSlotClick, onOccurrenceCli
                     'event-block',
                     'compact',
                     height < 34 ? 'short' : '',
+                    columns >= 3 ? 'narrow' : '',
                     `kind-${occ.kind}`,
                   ]
                     .filter(Boolean)

@@ -46,4 +46,58 @@ describe('DayView', () => {
     expect(descargar.style.width).toContain('50%')
     expect(detalle.style.width).toContain('50%')
   })
+
+  it('separa en columnas dos recordatorios cercanos que se pintarían uno encima del otro', () => {
+    const day = new Date(2026, 9, 19, 11, 48, 0, 0)
+    const early = reminder('camaras', 'Mirar cámaras')
+    early.startsAt = new Date(2026, 9, 19, 15, 20, 0, 0)
+    early.endsAt = early.startsAt
+    early.originalStartsAt = early.startsAt
+    const later = reminder('tata', 'Confirmar tata')
+    later.startsAt = new Date(2026, 9, 19, 15, 37, 0, 0)
+    later.endsAt = later.startsAt
+    later.originalStartsAt = later.startsAt
+
+    render(
+      <DayView
+        date={day}
+        occurrences={[early, later]}
+        zoom={100}
+        onSlotClick={vi.fn()}
+        onOccurrenceClick={vi.fn()}
+      />,
+    )
+
+    const camaras = screen.getByRole('button', { name: /Mirar cámaras/ })
+    const tata = screen.getByRole('button', { name: /Confirmar tata/ })
+    expect(camaras).toHaveAttribute('data-column', '0')
+    expect(tata).toHaveAttribute('data-column', '1')
+    expect(camaras).toHaveAttribute('data-columns', '2')
+    expect(tata).toHaveAttribute('data-columns', '2')
+    expect(camaras.style.left).not.toBe(tata.style.left)
+  })
+
+  it('compacta el texto cuando hay tres columnas', () => {
+    const day = new Date(2026, 9, 19, 11, 48, 0, 0)
+    const slots = [0, 10, 20].map((minute, index) => {
+      const item = reminder(`r${index}`, `Aviso ${index}`)
+      const at = new Date(2026, 9, 19, 15, minute, 0, 0)
+      item.startsAt = at
+      item.endsAt = at
+      item.originalStartsAt = at
+      return item
+    })
+
+    render(
+      <DayView
+        date={day}
+        occurrences={slots}
+        zoom={100}
+        onSlotClick={vi.fn()}
+        onOccurrenceClick={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /Aviso 2/ }).className).toContain('narrow')
+  })
 })

@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { formatShortWeekday, formatTime, isSameDay } from '../../domain/dates'
-import { eventBlockBox, layoutTimedEvents } from '../../domain/eventLayout'
+import { eventBlockBox, layoutTimedEvents, minVisualSpanMs } from '../../domain/eventLayout'
 import { kindColor, kindGlyph, kindLabel, taskStatusLabel } from '../../domain/eventKind'
 import type { Occurrence } from '../../types'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const HOUR_PX = 48
+const MIN_BLOCK_PX = 22
 
 type Props = {
   date: Date
@@ -20,8 +21,12 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
   const hourHeight = HOUR_PX * scale
 
   const dayEvents = useMemo(
-    () => layoutTimedEvents(occurrences.filter((o) => isSameDay(o.startsAt, date))),
-    [occurrences, date],
+    () =>
+      layoutTimedEvents(
+        occurrences.filter((o) => isSameDay(o.startsAt, date)),
+        { minSpanMs: minVisualSpanMs(MIN_BLOCK_PX, hourHeight) },
+      ),
+    [occurrences, date, hourHeight],
   )
 
   return (
@@ -66,7 +71,7 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
             const endMin = occ.endsAt.getHours() * 60 + occ.endsAt.getMinutes()
             const top = (startMin / 60) * hourHeight
             const rawHeight = ((endMin - startMin) / 60) * hourHeight
-            const height = Math.max(rawHeight, occ.kind === 'reminder' ? 20 : 22)
+            const height = Math.max(rawHeight, MIN_BLOCK_PX)
             const timeLabel =
               occ.kind === 'reminder'
                 ? formatTime(occ.startsAt)
@@ -82,6 +87,7 @@ export function DayView({ date, occurrences, zoom, onSlotClick, onOccurrenceClic
                 className={[
                   'event-block',
                   height < 36 ? 'short' : '',
+                  columns >= 3 ? 'narrow' : '',
                   `kind-${occ.kind}`,
                 ]
                   .filter(Boolean)

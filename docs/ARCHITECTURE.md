@@ -118,7 +118,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Sidebar brand: logo + título + **rueda de ajustes** (menú: Gestionar calendarios, Semana laboral, Invitar usuario si admin, Salir y versión visible no interactiva).
 - **Organizador de eventos:** botón junto a “Hoy” que reemplaza la grilla por una lista cronológica con búsqueda y filtros por tipo, calendario, periodicidad y estado. Cada día lista todas las ocurrencias, incluidas las repeticiones, respetando excepciones. Próximos e historial se cargan de a 90 días; una serie que todavía no entra en esa ventana muestra su próxima ocurrencia. Editar/eliminar reutiliza el alcance “esta ocurrencia / toda la serie”.
-- **Grilla de día y semana:** los bloques que comparten horario se parten en columnas. Un recordatorio dura cero (`ends_at === starts_at`) y, si otro cae en ese mismo instante, se ve al lado: antes el de arriba tapaba al de abajo. La agenda lateral lista todas las ocurrencias del día, sin ese apilado.
+- **Grilla de día y semana:** los bloques que comparten horario se parten en columnas. Un recordatorio dura cero (`ends_at === starts_at`) y, si otro cae en ese mismo instante, se ve al lado: antes el de arriba tapaba al de abajo. El reparto usa también el alto mínimo pintado (22 px en día, 20 px en semana, según el zoom): dos avisos cercanos que se dibujarían uno encima del otro quedan en columnas vecinas, y un bloque ya más largo que esa huella no se estira. Con tres o más columnas el texto va en una sola línea. La agenda lateral lista todas las ocurrencias del día, sin ese apilado.
 - Las recurrencias pueden tener una fecha opcional **Finaliza**, persistida como `UNTIL` en el RRULE. Las series existentes sin límite se muestran como “Sin fecha de fin”.
 - La repetición mensual ofrece dos modos: por días de semana (`BYDAY`, comportamiento histórico) y por día del mes (`BYMONTHDAY`). En este último, si el día 29, 30 o 31 no existe en un mes, la expansión crea una única ocurrencia en el último día disponible; las excepciones se vinculan a esa fecha efectiva.
 - En **navegador** (no Tauri ni Capacitor): bajo el nombre de usuario, link **Descargar app para PC** → GitHub Releases `…/releases/latest`.
@@ -134,7 +134,7 @@ Las preferencias de semana laboral se crean al primer guardado (defaults en clie
 
 - Ventana principal + ventana de recordatorio (ver sección Avisos).
 - Capabilities en `src-tauri/capabilities/`.
-- Código **v1.2.13** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
+- Código **v1.2.14** en `main`; instalador y updater de escritorio publicados mediante GitHub Releases.
 
 ## Móvil (Capacitor)
 

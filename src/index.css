@@ -1115,8 +1115,6 @@ textarea:focus {
 
 .event-block {
   position: absolute;
-  left: 4px;
-  right: 4px;
   border: 1px solid rgba(0, 0, 0, 0.35);
   color: #fff;
   text-align: left;
@@ -1136,24 +1134,28 @@ textarea:focus {
   font-size: 0.72rem;
 }
 
-.event-block.short {
+.event-block.short,
+.event-block.narrow {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   white-space: nowrap;
 }
 
-.event-block.short strong {
+.event-block.short strong,
+.event-block.narrow strong {
   flex: 0 1 auto;
   min-width: 0;
 }
 
-.event-block.short span {
+.event-block.short span,
+.event-block.narrow span {
   flex: 0 0 auto;
   opacity: 0.95;
 }
 
-.event-block.short span::before {
+.event-block.short span::before,
+.event-block.narrow span::before {
   content: '·';
   margin-right: 0.35rem;
   opacity: 0.85;
